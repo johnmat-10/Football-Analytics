@@ -154,13 +154,6 @@
                     <i data-lucide="twitter" class="text-blue-400 group-hover:scale-110 transition-transform" size="14"></i>
                     <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 group-hover:text-white transition-colors">@totalf0otball</span>
                 </a>
-
-                <div id="mathematicalSummary" class="hidden lg:flex items-center gap-12 px-12 py-6 glass rounded-[32px] border border-white/5 shadow-2xl">
-                    <div class="text-center min-w-[140px]">
-                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Matrix Leader</span>
-                        <span id="headlineChampion" class="text-2xl font-black text-blue-500 tracking-tighter uppercase italic">--</span>
-                    </div>
-                </div>
             </div>
         </header>
 
@@ -338,13 +331,15 @@
                 const response = await fetch(CSV_URL);
                 if (!response.ok) throw new Error("Sync failure");
                 const data = await response.text();
-                const rows = data.split('\n').filter(r => r.trim() !== '').slice(1);
+                // Clean up any carriage returns and filter empty rows
+                const rows = data.replace(/\r/g, '').split('\n').filter(r => r.trim() !== '').slice(1);
                 
                 rows.forEach(row => {
                     const cols = row.split(',').map(s => s.trim());
                     if (cols.length >= 4) {
                         const [home, away, hS, aS] = cols;
-                        const m = fixtures.find(f => f.home === home && f.away === away);
+                        // Find matching fixture based on team names from CSV
+                        const m = fixtures.find(f => f.home.toLowerCase() === home.toLowerCase() && f.away.toLowerCase() === away.toLowerCase());
                         if (m && hS !== "" && hS !== undefined && !isNaN(hS)) {
                             m.hScore = parseInt(hS);
                             m.aScore = parseInt(aS);
@@ -361,7 +356,7 @@
 
         async function calculateTable() {
             const stats = {};
-            TEAM_NAMES.forEach(n => stats[n] = { name: n, pld: 0, w: 0, d: 0, l: 0, pts: 0, gd: 0, font: [], form: [], rem: 0 });
+            TEAM_NAMES.forEach(n => stats[n] = { name: n, pld: 0, w: 0, d: 0, l: 0, pts: 0, gd: 0, form: [], rem: 0 });
             
             fixtures.forEach(f => {
                 if (f.hScore !== null) {
@@ -390,18 +385,26 @@
                 t.maxPts = t.pts + (t.rem * 3); 
             });
 
-            document.getElementById('lastUpdatedDate').innerText = `DATABASE SYNC: ${latestMatchDate.toUpperCase()}`;
+            const lastDateElement = document.getElementById('lastUpdatedDate');
+            if (lastDateElement) {
+                lastDateElement.innerText = `DATABASE SYNC: ${latestMatchDate.toUpperCase()}`;
+            }
+
             renderTable(currentSortedTeams);
             renderPlot(currentSortedTeams);
-            renderHeadlines(currentSortedTeams);
             renderUpcomingFeed();
 
-            document.getElementById('loadingOverlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
+            const loading = document.getElementById('loadingOverlay');
+            if (loading) {
+                loading.style.opacity = '0';
+                setTimeout(() => loading.style.display = 'none', 400);
+            }
         }
 
         function renderTable(teams) {
             const container = document.getElementById('standingsBody');
+            if (!container) return;
+
             const isMBSGFirst = teams[0].name === "Mohun Bagan SG";
             const acl2Idx = isMBSGFirst ? 1 : 0;
 
@@ -435,12 +438,17 @@
 
         function renderPlot(teams) {
             const container = document.getElementById('plotRows');
+            if (!container) return;
+
             const highestMax = Math.max(...teams.map(t => t.maxPts));
             const lastMax = teams[13].maxPts;
             const leaderFloor = teams[0].pts;
             
-            document.getElementById('titleLine').style.left = `${(highestMax / 39) * 100}%`;
-            document.getElementById('safetyLine').style.left = `${(lastMax / 39) * 100}%`;
+            const titleLine = document.getElementById('titleLine');
+            const safetyLine = document.getElementById('safetyLine');
+
+            if (titleLine) titleLine.style.left = `${(highestMax / 39) * 100}%`;
+            if (safetyLine) safetyLine.style.left = `${(lastMax / 39) * 100}%`;
 
             container.innerHTML = teams.map(t => {
                 const cP = (t.pts / 39) * 100, mP = (t.maxPts / 39) * 100;
@@ -468,15 +476,12 @@
             }).join('');
         }
 
-        function renderHeadlines(teams) {
-            if (!teams || teams.length === 0) return;
-            const leader = teams[0];
-            document.getElementById('headlineChampion').innerText = leader ? leader.code : "--";
-        }
-
         function renderUpcomingFeed() {
+            const container = document.getElementById('upcomingFeed');
+            if (!container) return;
+
             const up = fixtures.filter(f => f.hScore === null).slice(0, 15);
-            document.getElementById('upcomingFeed').innerHTML = up.map(f => `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 group hover:bg-white/[0.05] transition">
+            container.innerHTML = up.map(f => `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 group hover:bg-white/[0.05] transition">
                 <span class="text-[8px] font-black text-blue-500 uppercase block mb-3 tracking-[0.2em]">${f.date} • ${f.venue}</span>
                 <div class="flex items-center justify-between"><span class="text-xs font-black">${TEAM_DATA[f.home].code}</span><span class="text-[9px] font-black text-slate-700">VS</span><span class="text-xs font-black">${TEAM_DATA[f.away].code}</span></div>
             </div>`).join('');
@@ -489,37 +494,50 @@
             const ptsToTitle = Math.max(0, othersMax - team.pts + 1);
             const ptsToSafety = Math.max(0, lastMax - team.pts + 1);
 
-            document.getElementById('modalHeader').innerHTML = `<div class="flex items-center gap-6">
-                <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black shadow-2xl" style="background:${TEAM_DATA[name].color}">${TEAM_DATA[name].code}</div>
-                <div><h2 class="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">${name}</h2><span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Strategic Profile / Matrix #${team.rank}</span></div>
-            </div>`;
+            const modalHeader = document.getElementById('modalHeader');
+            if (modalHeader) {
+                modalHeader.innerHTML = `<div class="flex items-center gap-6">
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black shadow-2xl" style="background:${TEAM_DATA[name].color}">${TEAM_DATA[name].code}</div>
+                    <div><h2 class="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">${name}</h2><span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Strategic Profile / Matrix #${team.rank}</span></div>
+                </div>`;
+            }
 
             const tM = document.getElementById('modalTitleMath'), sM = document.getElementById('modalSafetyMath');
             const isChamp = team.pts > othersMax, isElim = team.maxPts < currentSortedTeams[0].pts, isSafe = team.pts > lastMax;
 
-            tM.innerText = isChamp ? "SECURED" : (isElim ? "IMPOSSIBLE" : `${ptsToTitle} PTS TO LOCK`);
-            sM.innerText = isSafe ? "CONFIRMED" : `${ptsToSafety} PTS TO SAFETY`;
+            if (tM) tM.innerText = isChamp ? "SECURED" : (isElim ? "IMPOSSIBLE" : `${ptsToTitle} PTS TO LOCK`);
+            if (sM) sM.innerText = isSafe ? "CONFIRMED" : `${ptsToSafety} PTS TO SAFETY`;
             
-            document.getElementById('titleDisclaimer').classList.toggle('hidden', isChamp || isElim);
-            document.getElementById('safetyDisclaimer').classList.toggle('hidden', isSafe);
+            const titleDisc = document.getElementById('titleDisclaimer');
+            const safetyDisc = document.getElementById('safetyDisclaimer');
+            if (titleDisc) titleDisc.classList.toggle('hidden', isChamp || isElim);
+            if (safetyDisc) safetyDisc.classList.toggle('hidden', isSafe);
 
-            document.getElementById('modalFullSchedule').innerHTML = fixtures.filter(f => f.home === name || f.away === name).map(f => {
-                const isP = f.hScore !== null, isH = f.home === name;
-                let b = ""; if (isP) {
-                    const tS = isH ? f.hScore : f.aScore, oS = isH ? f.aScore : f.hScore;
-                    const r = tS > oS ? 'W' : tS < oS ? 'L' : 'D';
-                    b = `<span class="w-6 h-6 rounded flex items-center justify-center text-[9px] font-black ${r==='W'?'bg-emerald-500':r==='L'?'bg-rose-500':'bg-slate-600'}">${r}</span>`;
-                }
-                return `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 flex items-center justify-between transition hover:bg-white/[0.05]">
-                    <div class="flex flex-col gap-1"><span class="text-[8px] font-black text-slate-500 uppercase">${f.date}</span><div class="flex items-center gap-3">${b}<span class="text-xs font-bold text-white uppercase tracking-tight">${isH ? f.away : f.home}</span></div></div>
-                    <div class="text-right">${isP ? `<span class="text-xl font-black tabular-nums tracking-tighter">${f.hScore}-${f.aScore}</span>` : `<span class="text-[8px] font-black text-blue-500 uppercase tracking-widest">${f.venue}</span>`}</div>
-                </div>`;
-            }).join('');
-            document.getElementById('teamModal').classList.remove('hidden');
+            const scheduleContainer = document.getElementById('modalFullSchedule');
+            if (scheduleContainer) {
+                scheduleContainer.innerHTML = fixtures.filter(f => f.home === name || f.away === name).map(f => {
+                    const isP = f.hScore !== null, isH = f.home === name;
+                    let b = ""; if (isP) {
+                        const tS = isH ? f.hScore : f.aScore, oS = isH ? f.aScore : f.hScore;
+                        const r = tS > oS ? 'W' : tS < oS ? 'L' : 'D';
+                        b = `<span class="w-6 h-6 rounded flex items-center justify-center text-[9px] font-black ${r==='W'?'bg-emerald-500':r==='L'?'bg-rose-500':'bg-slate-600'}">${r}</span>`;
+                    }
+                    return `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 flex items-center justify-between transition hover:bg-white/[0.05]">
+                        <div class="flex flex-col gap-1"><span class="text-[8px] font-black text-slate-500 uppercase">${f.date}</span><div class="flex items-center gap-3">${b}<span class="text-xs font-bold text-white uppercase tracking-tight">${isH ? f.away : f.home}</span></div></div>
+                        <div class="text-right">${isP ? `<span class="text-xl font-black tabular-nums tracking-tighter">${f.hScore}-${f.aScore}</span>` : `<span class="text-[8px] font-black text-blue-500 uppercase tracking-widest">${f.venue}</span>`}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            const modal = document.getElementById('teamModal');
+            if (modal) modal.classList.remove('hidden');
             lucide.createIcons();
         }
 
-        function closeModal() { document.getElementById('teamModal').classList.add('hidden'); }
+        function closeModal() {
+            const modal = document.getElementById('teamModal');
+            if (modal) modal.classList.add('hidden');
+        }
 
         window.onload = async () => {
             initData();
