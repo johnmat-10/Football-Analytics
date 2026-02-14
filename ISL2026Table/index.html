@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ISL 2026 - Tactical Terminal</title>
+    <title>ISL 2026 - Points & Projections Matrix</title>
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23020617'/><path d='M30 35 L70 35 M30 50 L55 50 M30 65 L70 65' stroke='%233b82f6' stroke-width='10' stroke-linecap='round'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -39,7 +39,7 @@
             border: 1px solid var(--border);
         }
 
-        /* Tactical Row Glows */
+        /* Matrix Row Glows */
         .champion-glow { background: linear-gradient(90deg, rgba(251, 191, 36, 0.05) 0%, transparent 100%); border-left: 4px solid var(--gold) !important; }
         .acl2-glow { background: linear-gradient(90deg, rgba(34, 211, 238, 0.05) 0%, transparent 100%); border-left: 4px solid #22d3ee !important; }
         .relegation-glow { background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%); border-left: 4px solid #ef4444 !important; }
@@ -140,7 +140,7 @@
         <header class="mb-16 flex flex-col lg:flex-row lg:items-start justify-between gap-10">
             <div class="flex items-center gap-4">
                 <div>
-                    <h1 class="terminal-header text-5xl font-black text-white leading-none">ISL 2026 <span class="text-blue-600">/ TERMINAL</span></h1>
+                    <h1 class="terminal-header text-5xl font-black text-white leading-none">ISL 2026 <span class="text-blue-600">/ POINTS MATRIX</span></h1>
                     <p class="text-slate-500 font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 mt-4">
                         <span id="lastUpdatedDate" class="text-blue-500 uppercase">DATABASE SYNC: FETCHING...</span>
                         <span class="opacity-20">|</span>
@@ -188,14 +188,14 @@
                 <section class="glass rounded-[48px] p-12 border border-white/5 shadow-2xl relative">
                     <div class="mb-14 text-center">
                         <h3 class="text-xs font-black uppercase tracking-[0.4em] text-blue-500 mb-2">Outcome Projections</h3>
-                        <p class="text-2xl font-black text-white tracking-tighter uppercase">Mathematical Threshold Tracking</p>
+                        <p class="text-2xl font-black text-white tracking-tighter uppercase">Points Tracking Matrix</p>
                     </div>
                     
                     <div class="relative pt-16 pb-4 min-h-[500px]">
                         <div class="flex items-center text-[10px] font-black text-slate-700 mb-10 border-b border-white/5 pb-6">
-                            <div class="w-[160px] pr-8 text-right uppercase tracking-[0.2em]">Asset</div>
+                            <div class="w-[160px] pr-8 text-right uppercase tracking-[0.2em]">Team</div>
                             <div class="flex-1 flex justify-between px-2 tracking-[0.1em]">
-                                <span>0 PTS</span><span>10</span><span>20</span><span>30</span><span>39 PTS</span>
+                                <span>0 PTS</span><span>20</span><span>40</span><span>60</span><span>78 PTS</span>
                             </div>
                             <div class="w-[100px] pl-8 text-left uppercase tracking-[0.2em]">Limit</div>
                         </div>
@@ -243,14 +243,15 @@
                 Built by <span class="text-white uppercase">John Mathew</span>
             </p>
             <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-800 text-center">
-                &copy; 2026 ISL Tactical Terminal
+                &copy; 2026 ISL Points & Projections Matrix
             </p>
         </footer>
     </div>
 
     <script>
-        // Use Raw URL for GitHub CSV
+        // RAW URL from the GitHub link provided
         const CSV_URL = "https://raw.githubusercontent.com/johnmat-10/Football-Analytics/main/ISL2026Table/isl_2026_fixtures.csv";
+        const TOTAL_MAX_PTS = 78; // 14 teams * (13*2) games = 26 games * 3 pts = 78 max
 
         const TEAM_DATA = {
             "Mohun Bagan SG": { code: "MBSG", color: "#851c2d" },
@@ -331,14 +332,14 @@
                 const response = await fetch(CSV_URL);
                 if (!response.ok) throw new Error("Sync failure");
                 const data = await response.text();
-                // Clean rows and split by line
+                // Clean up any carriage returns and filter empty rows
                 const rows = data.replace(/\r/g, '').split('\n').filter(r => r.trim() !== '').slice(1);
                 
                 rows.forEach(row => {
                     const cols = row.split(',').map(s => s.trim());
                     if (cols.length >= 4) {
                         const [home, away, hS, aS] = cols;
-                        // Match CSV row to official fixture list
+                        // Find matching fixture based on team names from CSV
                         const m = fixtures.find(f => f.home.toLowerCase() === home.toLowerCase() && f.away.toLowerCase() === away.toLowerCase());
                         if (m && hS !== "" && hS !== undefined && !isNaN(hS)) {
                             m.hScore = parseInt(hS);
@@ -447,11 +448,11 @@
             const titleLine = document.getElementById('titleLine');
             const safetyLine = document.getElementById('safetyLine');
 
-            if (titleLine) titleLine.style.left = `${(highestMax / 39) * 100}%`;
-            if (safetyLine) safetyLine.style.left = `${(lastMax / 39) * 100}%`;
+            if (titleLine) titleLine.style.left = `${(highestMax / TOTAL_MAX_PTS) * 100}%`;
+            if (safetyLine) safetyLine.style.left = `${(lastMax / TOTAL_MAX_PTS) * 100}%`;
 
             container.innerHTML = teams.map(t => {
-                const cP = (t.pts / 39) * 100, mP = (t.maxPts / 39) * 100;
+                const cP = (t.pts / TOTAL_MAX_PTS) * 100, mP = (t.maxPts / TOTAL_MAX_PTS) * 100;
                 let tag = "Active", tC = "text-blue-500", theme = "blue";
                 const othersMax = Math.max(...teams.filter(x => x.name !== t.name).map(x => x.maxPts));
                 
@@ -481,9 +482,23 @@
             if (!container) return;
 
             const up = fixtures.filter(f => f.hScore === null).slice(0, 15);
+            if (up.length === 0) {
+                container.innerHTML = `<p class="text-[9px] font-black uppercase tracking-widest text-slate-700 text-center py-10 italic">No fixtures pending</p>`;
+                return;
+            }
             container.innerHTML = up.map(f => `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 group hover:bg-white/[0.05] transition">
                 <span class="text-[8px] font-black text-blue-500 uppercase block mb-3 tracking-[0.2em]">${f.date} • ${f.venue}</span>
-                <div class="flex items-center justify-between"><span class="text-xs font-black">${TEAM_DATA[f.home].code}</span><span class="text-[9px] font-black text-slate-700">VS</span><span class="text-xs font-black">${TEAM_DATA[f.away].code}</span></div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                         <span class="w-6 h-6 rounded flex items-center justify-center text-[7px] text-white font-black" style="background:${TEAM_DATA[f.home].color}">${TEAM_DATA[f.home].code}</span>
+                         <span class="text-xs font-black">${TEAM_DATA[f.home].code}</span>
+                    </div>
+                    <span class="text-[9px] font-black text-slate-700">VS</span>
+                    <div class="flex items-center gap-2">
+                         <span class="text-xs font-black">${TEAM_DATA[f.away].code}</span>
+                         <span class="w-6 h-6 rounded flex items-center justify-center text-[7px] text-white font-black" style="background:${TEAM_DATA[f.away].color}">${TEAM_DATA[f.away].code}</span>
+                    </div>
+                </div>
             </div>`).join('');
         }
 
@@ -541,8 +556,21 @@
 
         window.onload = async () => {
             initData();
-            await fetchCSV();
-            calculateTable();
+            // Start sync
+            fetchCSV().then(() => {
+                calculateTable();
+            }).catch(() => {
+                calculateTable(); // Force render on failure
+            });
+            
+            // Safety timeout for sync screen
+            setTimeout(() => {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay && overlay.style.display !== 'none') {
+                    calculateTable();
+                }
+            }, 3000);
+            
             lucide.createIcons();
         };
     </script>
