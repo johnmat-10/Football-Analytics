@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ISL 2026 - Tactical Terminal</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23020617'/><path d='M30 35 L70 35 M30 50 L55 50 M30 65 L70 65' stroke='%233b82f6' stroke-width='10' stroke-linecap='round'/></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -154,12 +156,7 @@
                 </a>
 
                 <div id="mathematicalSummary" class="hidden lg:flex items-center gap-12 px-12 py-6 glass rounded-[32px] border border-white/5 shadow-2xl">
-                    <div class="text-center">
-                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Race Contention</span>
-                        <span id="headlineContenders" class="text-2xl font-black text-amber-400 tracking-tighter">--</span>
-                    </div>
-                    <div class="w-px h-10 bg-white/5"></div>
-                    <div class="text-center">
+                    <div class="text-center min-w-[140px]">
                         <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Matrix Leader</span>
                         <span id="headlineChampion" class="text-2xl font-black text-blue-500 tracking-tighter uppercase italic">--</span>
                     </div>
@@ -239,17 +236,12 @@
             </div>
 
             <div class="xl:col-span-4 space-y-12">
-                <section class="glass rounded-[48px] p-10 border border-white/5 shadow-xl flex flex-col max-h-[650px]">
+                <section class="glass rounded-[48px] p-10 border border-white/5 shadow-xl flex flex-col h-full min-h-[500px]">
                     <h2 class="text-xs font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3 mb-10">
                         <i data-lucide="calendar" class="text-blue-500" size="16"></i> Coming Next
                     </h2>
                     <div id="upcomingFeed" class="space-y-5 overflow-y-auto custom-scrollbar pr-3 flex-1"></div>
                 </section>
-
-                <div class="glass rounded-[40px] p-10 border border-white/10">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 mb-8 italic text-center">Venue Profile</h3>
-                    <div id="venueList" class="flex flex-wrap justify-center gap-3"></div>
-                </div>
             </div>
         </div>
 
@@ -264,8 +256,8 @@
     </div>
 
     <script>
-        // CRITICAL: Ensure CSV is in the SAME folder as index.html
-        const CSV_URL = "isl_2026_fixtures.csv"; 
+        // RAW URL from the GitHub link provided
+        const CSV_URL = "https://raw.githubusercontent.com/johnmat-10/Football-Analytics/9ecc3e0ecce7402639d7658df174ff5f8d35e428/ISL2026Table/isl_2026_fixtures.csv";
 
         const TEAM_DATA = {
             "Mohun Bagan SG": { code: "MBSG", color: "#851c2d" },
@@ -343,50 +335,67 @@
 
         async function fetchCSV() {
             try {
-                // Fetch with cache busting
-                const response = await fetch(CSV_URL + '?t=' + Date.now());
-                if (!response.ok) throw new Error();
+                const response = await fetch(CSV_URL);
+                if (!response.ok) throw new Error("Sync failure");
                 const data = await response.text();
-                const rows = data.split('\n').slice(1);
+                const rows = data.split('\n').filter(r => r.trim() !== '').slice(1);
+                
                 rows.forEach(row => {
-                    const [home, away, hS, aS] = row.split(',').map(s => s?.trim());
-                    const m = fixtures.find(f => f.home === home && f.away === away);
-                    if (m && hS !== "" && hS !== undefined) {
-                        m.hScore = parseInt(hS); m.aScore = parseInt(aS);
-                        latestMatchDate = m.date; 
+                    const cols = row.split(',').map(s => s.trim());
+                    if (cols.length >= 4) {
+                        const [home, away, hS, aS] = cols;
+                        const m = fixtures.find(f => f.home === home && f.away === away);
+                        if (m && hS !== "" && hS !== undefined && !isNaN(hS)) {
+                            m.hScore = parseInt(hS);
+                            m.aScore = parseInt(aS);
+                            latestMatchDate = m.date;
+                        }
                     }
                 });
-            } catch (e) { 
-                console.warn("Using internal memory only.");
-                latestMatchDate = "LOCAL MEMORY";
+                console.log("Successfully synced with GitHub Matrix.");
+            } catch (e) {
+                console.warn("External sync failed. Using local memory.", e);
+                latestMatchDate = "OFFLINE";
             }
         }
 
         async function calculateTable() {
             const stats = {};
-            TEAM_NAMES.forEach(n => stats[n] = { name: n, pld: 0, w: 0, d: 0, l: 0, pts: 0, gd: 0, form: [], rem: 0 });
+            TEAM_NAMES.forEach(n => stats[n] = { name: n, pld: 0, w: 0, d: 0, l: 0, pts: 0, gd: 0, font: [], form: [], rem: 0 });
+            
             fixtures.forEach(f => {
                 if (f.hScore !== null) {
                     const hs = f.hScore, as = f.aScore;
                     stats[f.home].pld++; stats[f.away].pld++;
                     stats[f.home].gd += (hs-as); stats[f.away].gd += (as-hs);
-                    if (hs > as) { stats[f.home].w++; stats[f.home].pts += 3; stats[f.home].form.push('W'); stats[f.away].form.push('L'); }
-                    else if (as > hs) { stats[f.away].w++; stats[f.away].pts += 3; stats[f.away].form.push('W'); stats[f.home].form.push('L'); }
-                    else { stats[f.home].d++; stats[f.away].d++; stats[f.home].pts += 1; stats[f.away].pts += 1; stats[f.home].form.push('D'); stats[f.away].form.push('D'); }
-                } else { stats[f.home].rem++; stats[f.away].rem++; }
+                    if (hs > as) { 
+                        stats[f.home].w++; stats[f.home].pts += 3; stats[f.home].form.push('W'); 
+                        stats[f.away].form.push('L'); 
+                    } else if (as > hs) { 
+                        stats[f.away].w++; stats[f.away].pts += 3; stats[f.away].form.push('W'); 
+                        stats[f.home].form.push('L'); 
+                    } else { 
+                        stats[f.home].d++; stats[f.away].d++; 
+                        stats[f.home].pts += 1; stats[f.away].pts += 1; 
+                        stats[f.home].form.push('D'); stats[f.away].form.push('D'); 
+                    }
+                } else { 
+                    stats[f.home].rem++; stats[f.away].rem++; 
+                }
             });
 
             currentSortedTeams = Object.values(stats).sort((a,b) => b.pts - a.pts || b.gd - a.gd || a.pld - b.pld);
-            currentSortedTeams.forEach((t, i) => { t.rank = i + 1; t.maxPts = t.pts + (t.rem * 3); });
+            currentSortedTeams.forEach((t, i) => { 
+                t.rank = i + 1; 
+                t.maxPts = t.pts + (t.rem * 3); 
+            });
 
             document.getElementById('lastUpdatedDate').innerText = `DATABASE SYNC: ${latestMatchDate.toUpperCase()}`;
             renderTable(currentSortedTeams);
             renderPlot(currentSortedTeams);
             renderHeadlines(currentSortedTeams);
             renderUpcomingFeed();
-            renderVenues();
 
-            // Clear loading screen immediately
             document.getElementById('loadingOverlay').style.opacity = '0';
             setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
         }
@@ -460,9 +469,9 @@
         }
 
         function renderHeadlines(teams) {
-            const active = teams.filter(t => t.maxPts >= teams[0].pts).length;
-            document.getElementById('headlineContenders').innerText = `${active} ASSETS`;
-            document.getElementById('headlineChampion').innerText = teams[0].code;
+            if (!teams || teams.length === 0) return;
+            const leader = teams[0];
+            document.getElementById('headlineChampion').innerText = leader ? leader.code : "--";
         }
 
         function renderUpcomingFeed() {
@@ -470,13 +479,6 @@
             document.getElementById('upcomingFeed').innerHTML = up.map(f => `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 group hover:bg-white/[0.05] transition">
                 <span class="text-[8px] font-black text-blue-500 uppercase block mb-3 tracking-[0.2em]">${f.date} • ${f.venue}</span>
                 <div class="flex items-center justify-between"><span class="text-xs font-black">${TEAM_DATA[f.home].code}</span><span class="text-[9px] font-black text-slate-700">VS</span><span class="text-xs font-black">${TEAM_DATA[f.away].code}</span></div>
-            </div>`).join('');
-        }
-
-        function renderVenues() {
-            const counts = {}; fixtures.filter(f => f.hScore === null).forEach(f => counts[f.venue] = (counts[f.venue] || 0) + 1);
-            document.getElementById('venueList').innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(v => `<div class="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/5 text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition cursor-default">
-                <span class="text-blue-500 mr-2">${v[1]}</span> ${v[0]}
             </div>`).join('');
         }
 
@@ -521,13 +523,6 @@
 
         window.onload = async () => {
             initData();
-            // Set a hard timeout to clear overlay if fetch fails silently
-            setTimeout(() => {
-                if (document.getElementById('loadingOverlay').style.display !== 'none') {
-                    calculateTable();
-                }
-            }, 3000);
-            
             await fetchCSV();
             calculateTable();
             lucide.createIcons();
