@@ -249,8 +249,8 @@
     </div>
 
     <script>
-        // RAW URL from the GitHub link provided
-        const CSV_URL = "https://raw.githubusercontent.com/johnmat-10/Football-Analytics/9ecc3e0ecce7402639d7658df174ff5f8d35e428/ISL2026Table/isl_2026_fixtures.csv";
+        // Use Raw URL for GitHub CSV
+        const CSV_URL = "https://raw.githubusercontent.com/johnmat-10/Football-Analytics/main/ISL2026Table/isl_2026_fixtures.csv";
 
         const TEAM_DATA = {
             "Mohun Bagan SG": { code: "MBSG", color: "#851c2d" },
@@ -331,14 +331,14 @@
                 const response = await fetch(CSV_URL);
                 if (!response.ok) throw new Error("Sync failure");
                 const data = await response.text();
-                // Clean up any carriage returns and filter empty rows
+                // Clean rows and split by line
                 const rows = data.replace(/\r/g, '').split('\n').filter(r => r.trim() !== '').slice(1);
                 
                 rows.forEach(row => {
                     const cols = row.split(',').map(s => s.trim());
                     if (cols.length >= 4) {
                         const [home, away, hS, aS] = cols;
-                        // Find matching fixture based on team names from CSV
+                        // Match CSV row to official fixture list
                         const m = fixtures.find(f => f.home.toLowerCase() === home.toLowerCase() && f.away.toLowerCase() === away.toLowerCase());
                         if (m && hS !== "" && hS !== undefined && !isNaN(hS)) {
                             m.hScore = parseInt(hS);
@@ -347,7 +347,7 @@
                         }
                     }
                 });
-                console.log("Successfully synced with GitHub Matrix.");
+                console.log("Strategic Data Synced Successfully.");
             } catch (e) {
                 console.warn("External sync failed. Using local memory.", e);
                 latestMatchDate = "OFFLINE";
@@ -423,7 +423,7 @@
                     <td class="px-10 py-6 font-black text-slate-600 text-center text-xs tracking-tighter">${i+1}</td>
                     <td class="px-4 py-6 font-bold text-white flex items-center gap-4">
                         <span class="w-8 h-8 rounded-lg flex items-center justify-center text-[9px] text-white font-black shadow-xl" style="background:${TEAM_DATA[t.name].color}">${TEAM_DATA[t.name].code}</span>
-                        <div><span class="block">${t.name}</span>${tagsHTML}</div>
+                        <div><span class="block text-sm">${t.name}</span>${tagsHTML}</div>
                     </td>
                     <td class="px-2 py-6 text-center text-slate-500 font-bold text-xs">${t.pld}</td>
                     <td class="px-2 py-6 text-center text-slate-400 font-medium text-xs">${t.w}</td>
