@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISL 2026 - Tactical Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@900&display=swap');
+        
+        :root {
+            --bg-deep: #020617;
+            --card-bg: #0b1120;
+            --border: rgba(255, 255, 255, 0.05);
+            --accent-blue: #3b82f6;
+            --gold: #fbbf24;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg-deep); 
+            color: #f1f5f9;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        .terminal-header {
+            font-family: 'Inter', sans-serif;
+            letter-spacing: -0.05em;
+            text-transform: uppercase;
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+        }
+
+        /* Tactical Row Glows */
+        .champion-glow { background: linear-gradient(90deg, rgba(251, 191, 36, 0.05) 0%, transparent 100%); border-left: 4px solid var(--gold) !important; }
+        .acl2-glow { background: linear-gradient(90deg, rgba(34, 211, 238, 0.05) 0%, transparent 100%); border-left: 4px solid #22d3ee !important; }
+        .relegation-glow { background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%); border-left: 4px solid #ef4444 !important; }
+        
+        /* Tactical Subtle Cut-off Lines */
+        .cutoff-line { 
+            position: absolute; 
+            top: 0; 
+            bottom: 0; 
+            width: 0; 
+            border-left: 1.5px dashed rgba(255,255,255,0.08);
+            z-index: 5; 
+            pointer-events: none;
+            transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+
+        .math-track { position: absolute; height: 1px; background: rgba(255, 255, 255, 0.05); top: 50%; transform: translateY(-50%); width: 100%; }
+        .available-bar { position: absolute; height: 4px; border-radius: 2px; top: 50%; transform: translateY(-50%); opacity: 0.25; transition: all 0.6s ease; }
+        .pts-marker { 
+            position: absolute; width: 20px; height: 20px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 9px; font-weight: 900; top: 50%; transform: translate(-50%, -50%);
+            z-index: 20; border: 2px solid var(--bg-deep); transition: left 0.6s ease;
+            box-shadow: 0 0 15px rgba(0,0,0,0.6);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-deep);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+
+        .status-pill {
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .pill-gold { background: var(--gold); color: black; }
+        .pill-cyan { background: rgba(34, 211, 238, 0.1); color: #22d3ee; border: 1px solid rgba(34, 211, 238, 0.2); }
+
+        .modal-enter { animation: modalFadeIn 0.3s ease forwards; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-blue-500/30">
+    <!-- Initial Loading State -->
+    <div id="loadingOverlay">
+        <div class="w-8 h-8 border-2 border-white/5 border-t-white rounded-full animate-spin mb-4"></div>
+        <p class="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">Syncing Matrix</p>
+    </div>
+
+    <!-- Deep Dive Modal -->
+    <div id="teamModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm hidden" onclick="if(event.target === this) closeModal()">
+        <div class="glass w-full max-w-3xl rounded-[32px] overflow-hidden shadow-2xl border border-white/10 modal-enter">
+            <div id="modalHeader" class="p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]"></div>
+            <div class="p-10 space-y-12 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white/[0.03] p-8 rounded-[24px] border border-white/5 transition hover:bg-white/[0.05]">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Championship Threshold</span>
+                        <div id="modalTitleMath" class="text-3xl font-black text-amber-400 tracking-tighter">--</div>
+                        <span id="titleDisclaimer" class="text-[9px] text-slate-600 font-bold italic mt-2 hidden opacity-60">*as it stands</span>
+                    </div>
+                    <div class="bg-white/[0.03] p-8 rounded-[24px] border border-white/5 transition hover:bg-white/[0.05]">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Basement Safety Buffer</span>
+                        <div id="modalSafetyMath" class="text-3xl font-black text-rose-500 tracking-tighter">--</div>
+                        <span id="safetyDisclaimer" class="text-[9px] text-slate-600 font-bold italic mt-2 hidden opacity-60">*as it stands</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+                        <i data-lucide="layers-3" size="14"></i> Complete Season Matrix
+                    </h4>
+                    <div id="modalFullSchedule" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+            </div>
+            <div class="p-8 bg-black/40 text-center">
+                <button onclick="closeModal()" class="px-14 py-4 bg-white text-black rounded-full font-black uppercase tracking-widest transition-all text-[11px] hover:scale-105 active:scale-95">Dismiss Analytics</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-[1550px] mx-auto p-6 md:p-12 pb-24">
+        <!-- Identity Header -->
+        <header class="mb-16 flex flex-col lg:flex-row lg:items-start justify-between gap-10">
+            <div class="flex items-center gap-4">
+                <div>
+                    <h1 class="terminal-header text-5xl font-black text-white leading-none">ISL 2026 <span class="text-blue-600">/ TERMINAL</span></h1>
+                    <p class="text-slate-500 font-bold text-[11px] uppercase tracking-[0.4em] flex items-center gap-3 mt-4">
+                        <span id="lastUpdatedDate" class="text-blue-500 uppercase">DATABASE SYNC: FETCHING...</span>
+                        <span class="opacity-20">|</span>
+                        <span>LIVE PERMUTATION MATRIX</span>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col items-end gap-6">
+                <!-- Twitter/X Handle -->
+                <a href="https://x.com/totalf0otball" target="_blank" class="flex items-center gap-3 px-6 py-2.5 glass rounded-full border border-white/5 hover:bg-white/5 transition-all group">
+                    <i data-lucide="twitter" class="text-blue-400 group-hover:scale-110 transition-transform" size="14"></i>
+                    <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 group-hover:text-white transition-colors">@totalf0otball</span>
+                </a>
+
+                <div id="mathematicalSummary" class="hidden lg:flex items-center gap-12 px-12 py-6 glass rounded-[32px] border border-white/5 shadow-2xl">
+                    <div class="text-center">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Race Contention</span>
+                        <span id="headlineContenders" class="text-2xl font-black text-amber-400 tracking-tighter">--</span>
+                    </div>
+                    <div class="w-px h-10 bg-white/5"></div>
+                    <div class="text-center">
+                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Matrix Leader</span>
+                        <span id="headlineChampion" class="text-2xl font-black text-blue-500 tracking-tighter uppercase italic">--</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-12">
+            <!-- Table and Plot -->
+            <div class="xl:col-span-8 space-y-12">
+                <section class="glass rounded-[48px] overflow-hidden border border-white/5 shadow-2xl">
+                    <div class="p-10 border-b border-white/5 bg-white/[0.01]">
+                        <h2 class="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-slate-400">
+                            <i data-lucide="list" class="text-blue-500" size="18"></i> Performance Matrix
+                        </h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="text-slate-600 text-[9px] uppercase tracking-[0.3em] font-black border-b border-white/5">
+                                <tr>
+                                    <th class="px-10 py-6 text-center text-xs">#</th>
+                                    <th class="px-4 py-6">Club</th>
+                                    <th class="px-2 py-6 text-center">P</th>
+                                    <th class="px-2 py-6 text-center">W</th>
+                                    <th class="px-2 py-6 text-center">D</th>
+                                    <th class="px-2 py-6 text-center">L</th>
+                                    <th class="px-2 py-6 text-center text-xs">GD</th>
+                                    <th class="px-10 py-6 text-center">Recent</th>
+                                    <th class="px-8 py-6 text-center text-white">PTS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="standingsBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="glass rounded-[48px] p-12 border border-white/5 shadow-2xl relative">
+                    <div class="mb-14 text-center">
+                        <h3 class="text-xs font-black uppercase tracking-[0.4em] text-blue-500 mb-2">Outcome Projections</h3>
+                        <p class="text-2xl font-black text-white tracking-tighter uppercase">Mathematical Threshold Tracking</p>
+                    </div>
+                    
+                    <div class="relative pt-16 pb-4 min-h-[500px]">
+                        <div class="flex items-center text-[10px] font-black text-slate-700 mb-10 border-b border-white/5 pb-6">
+                            <div class="w-[160px] pr-8 text-right uppercase tracking-[0.2em]">Asset</div>
+                            <div class="flex-1 flex justify-between px-2 tracking-[0.1em]">
+                                <span>0 PTS</span><span>10</span><span>20</span><span>30</span><span>39 PTS</span>
+                            </div>
+                            <div class="w-[100px] pl-8 text-left uppercase tracking-[0.2em]">Limit</div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="flex absolute inset-0 pointer-events-none">
+                                <div class="w-[160px] h-full"></div> 
+                                <div class="flex-1 h-full relative" id="plotCoordinateSpace">
+                                    <div id="titleLine" class="cutoff-line"></div>
+                                    <div id="safetyLine" class="cutoff-line"></div>
+                                    <!-- Background grid marks - Precise 39pt scale -->
+                                    <div class="absolute inset-0 flex justify-between pointer-events-none opacity-20">
+                                        <div class="w-px bg-white/10 h-full"></div>
+                                        <div class="w-px bg-white/10 h-full" style="left: 25.64%"></div> <!-- 10/39 -->
+                                        <div class="w-px bg-white/10 h-full" style="left: 51.28%"></div> <!-- 20/39 -->
+                                        <div class="w-px bg-white/10 h-full" style="left: 76.92%"></div> <!-- 30/39 -->
+                                        <div class="w-px bg-white/10 h-full" style="left: 100%"></div>
+                                    </div>
+                                </div>
+                                <div class="w-[100px] h-full"></div> 
+                            </div>
+                            <div id="plotRows" class="space-y-6 relative z-10"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-16 pt-10 border-t border-white/5 flex flex-wrap justify-center gap-12 text-slate-600 font-black uppercase tracking-[0.2em] text-[9px]">
+                        <div class="flex items-center gap-3"><div class="h-[1px] w-5 border-l-2 border-dashed border-white/20"></div> Title Ceiling</div>
+                        <div class="flex items-center gap-3"><div class="h-[1px] w-5 border-l-2 border-dashed border-white/20"></div> Safety Ceiling</div>
+                        <div class="flex items-center gap-3"><div class="h-1.5 w-8 bg-blue-500/30 rounded-full"></div> Available Window</div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="xl:col-span-4 space-y-12">
+                <section class="glass rounded-[48px] p-10 border border-white/5 shadow-xl flex flex-col max-h-[650px]">
+                    <h2 class="text-xs font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3 mb-10">
+                        <i data-lucide="calendar" class="text-blue-500" size="16"></i> Coming Next
+                    </h2>
+                    <div id="upcomingFeed" class="space-y-5 overflow-y-auto custom-scrollbar pr-3 flex-1"></div>
+                </section>
+
+                <div class="glass rounded-[40px] p-10 border border-white/10">
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 mb-8 italic text-center">Match Distribution</h3>
+                    <div id="venueList" class="flex flex-wrap justify-center gap-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-20 pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-center gap-12 opacity-60">
+            <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 text-center">
+                Built by <span class="text-white uppercase">John Mathew</span>
+            </p>
+            <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-800 text-center">
+                &copy; 2026 ISL Tactical Terminal
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Use relative path for seamless GitHub Pages integration
+        const CSV_URL = "isl_2026_fixtures.csv"; 
+
+        const TEAM_DATA = {
+            "Mohun Bagan SG": { code: "MBSG", color: "#851c2d" },
+            "Mumbai City FC": { code: "MCFC", color: "#00acec" },
+            "FC Goa": { code: "FCG", color: "#f36c21" },
+            "Odisha FC": { code: "OFC", color: "#662d91" },
+            "Kerala Blasters FC": { code: "KBFC", color: "#ffcb05" },
+            "Chennaiyin FC": { code: "CFC", color: "#005ca8" },
+            "North East United FC": { code: "NEUFC", color: "#ed1c24" },
+            "Bengaluru FC": { code: "BFC", color: "#1d4189" },
+            "Jamshedpur FC": { code: "JFC", color: "#ee3124" },
+            "East Bengal FC": { code: "EBFC", color: "#ed1c24" },
+            "Punjab FC": { code: "PFC", color: "#f36c21" },
+            "Mohammedan SC": { code: "MSC", color: "#000000" },
+            "Inter Kashi FC": { code: "IKFC", color: "#f36c21" }, // Orange
+            "Sporting Club Delhi": { code: "SCD", color: "#ed1c24" }  // Red
+        };
+
+        const TEAM_NAMES = Object.keys(TEAM_DATA);
+        
+        const OFFICIAL_FIXTURES = [
+            ["Mohun Bagan SG", "Kerala Blasters FC", "Feb 14", "VYBK"], ["FC Goa", "Inter Kashi FC", "Feb 14", "Fatorda"],
+            ["Jamshedpur FC", "Mohammedan SC", "Feb 15", "JRD TATA"], ["Bengaluru FC", "Sporting Club Delhi", "Feb 15", "Kanteerava"],
+            ["Odisha FC", "Punjab FC", "Feb 16", "TBC"], ["East Bengal FC", "North East United FC", "Feb 16", "KBK"],
+            ["Mumbai City FC", "Chennaiyin FC", "Feb 19", "TBC"], ["Mohammedan SC", "FC Goa", "Feb 20", "KBK"],
+            ["East Bengal FC", "Sporting Club Delhi", "Feb 21", "KBK"], ["Jamshedpur FC", "Punjab FC", "Feb 21", "JRD TATA"],
+            ["Bengaluru FC", "North East United FC", "Feb 22", "Kanteerava"], ["Kerala Blasters FC", "Mumbai City FC", "Feb 22", "Kochi"],
+            ["Mohun Bagan SG", "Chennaiyin FC", "Feb 23", "VYBK"], ["Odisha FC", "Inter Kashi FC", "Feb 24", "TBC"],
+            ["FC Goa", "Sporting Club Delhi", "Feb 26", "Fatorda"], ["East Bengal FC", "Jamshedpur FC", "Feb 27", "KBK"],
+            ["Bengaluru FC", "Punjab FC", "Feb 27", "Kanteerava"], ["Kerala Blasters FC", "Inter Kashi FC", "Feb 28", "Kochi"],
+            ["Mohun Bagan SG", "Mohammedan SC", "Feb 28", "VYBK"], ["Odisha FC", "Chennaiyin FC", "Mar 1", "TBC"],
+            ["Mumbai City FC", "North East United FC", "Mar 1", "TBC"], ["East Bengal FC", "FC Goa", "Mar 5", "KBK"],
+            ["Jamshedpur FC", "Inter Kashi FC", "Mar 6", "JRD TATA"], ["Odisha FC", "Mohun Bagan SG", "Mar 6", "TBC"],
+            ["Mohammedan SC", "Bengaluru FC", "Mar 7", "KBK"], ["Kerala Blasters FC", "Chennaiyin FC", "Mar 7", "Kochi"],
+            ["Mumbai City FC", "Sporting Club Delhi", "Mar 8", "TBC"], ["Punjab FC", "North East United FC", "Mar 9", "Delhi"],
+            ["Chennaiyin FC", "Mohammedan SC", "Mar 13", "Chennai"], ["Sporting Club Delhi", "Odisha FC", "Mar 13", "Delhi"],
+            ["East Bengal FC", "Kerala Blasters FC", "Mar 14", "KBK"], ["Bengaluru FC", "Mohun Bagan SG", "Mar 14", "Kanteerava"],
+            ["North East United FC", "Jamshedpur FC", "Mar 15", "Guwahati"], ["Inter Kashi FC", "Mumbai City FC", "Mar 15", "TBC"],
+            ["Punjab FC", "FC Goa", "Mar 16", "Delhi"], ["Sporting Club Delhi", "Jamshedpur FC", "Mar 19", "Delhi"],
+            ["North East United FC", "Odisha FC", "Mar 20", "Guwahati"], ["Mohun Bagan SG", "Mumbai City FC", "Mar 20", "VYBK"],
+            ["East Bengal FC", "Mohammedan SC", "Mar 21", "KBK"], ["Kerala Blasters FC", "Punjab FC", "Mar 21", "Kochi"],
+            ["Chennaiyin FC", "FC Goa", "Mar 22", "Chennai"], ["Inter Kashi FC", "Bengaluru FC", "Mar 22", "TBC"],
+            ["Punjab FC", "Mohammedan SC", "Apr 3", "Delhi"], ["Jamshedpur FC", "Mohun Bagan SG", "Apr 4", "JRD TATA"],
+            ["FC Goa", "Bengaluru FC", "Apr 4", "Fatorda"], ["Sporting Club Delhi", "Kerala Blasters FC", "Apr 5", "Delhi"],
+            ["Mumbai City FC", "Odisha FC", "Apr 5", "TBC"], ["Chennaiyin FC", "Inter Kashi FC", "Apr 7", "Chennai"],
+            ["Jamshedpur FC", "Mumbai City FC", "Apr 9", "JRD TATA"], ["North East United FC", "Sporting Club Delhi", "Apr 10", "Guwahati"],
+            ["FC Goa", "Odisha FC", "Apr 10", "Fatorda"], ["Chennaiyin FC", "East Bengal FC", "Apr 11", "Chennai"],
+            ["Bengaluru FC", "Kerala Blasters FC", "Apr 11", "Kanteerava"], ["Inter Kashi FC", "Mohammedan SC", "Apr 12", "TBC"],
+            ["Mohun Bagan SG", "Punjab FC", "Apr 12", "VYBK"], ["Kerala Blasters FC", "North East United FC", "Apr 15", "Kochi"],
+            ["East Bengal FC", "Bengaluru FC", "Apr 16", "KBK"], ["Chennaiyin FC", "Sporting Club Delhi", "Apr 17", "Chennai"],
+            ["Odisha FC", "Mohammedan SC", "Apr 17", "TBC"], ["Kerala Blasters FC", "Jamshedpur FC", "Apr 18", "Kochi"],
+            ["FC Goa", "Mumbai City FC", "Apr 18", "Fatorda"], ["North East United FC", "Mohun Bagan SG", "Apr 19", "Guwahati"],
+            ["Punjab FC", "Inter Kashi FC", "Apr 20", "Delhi"], ["Kerala Blasters FC", "Odisha FC", "Apr 23", "Kochi"],
+            ["North East United FC", "FC Goa", "Apr 24", "Guwahati"], ["East Bengal FC", "Punjab FC", "Apr 24", "KBK"],
+            ["Bengaluru FC", "Mumbai City FC", "Apr 25", "Kanteerava"], ["Jamshedpur FC", "Chennaiyin FC", "Apr 25", "JRD TATA"],
+            ["Sporting Club Delhi", "Mohammedan SC", "Apr 26", "Delhi"], ["Mohun Bagan SG", "Inter Kashi FC", "Apr 26", "VYBK"],
+            ["East Bengal FC", "Odisha FC", "Apr 28", "KBK"], ["Jamshedpur FC", "FC Goa", "May 1", "JRD TATA"],
+            ["Inter Kashi FC", "North East United FC", "May 2", "TBC"], ["Sporting Club Delhi", "Punjab FC", "May 2", "Delhi"],
+            ["Mohammedan SC", "Mumbai City FC", "May 3", "KBK"], ["Mohun Bagan SG", "East Bengal FC", "May 3", "VYBK"],
+            ["Odisha FC", "Bengaluru FC", "May 4", "TBC"], ["Punjab FC", "Chennaiyin FC", "May 6", "Delhi"],
+            ["Mumbai City FC", "East Bengal FC", "May 8", "TBC"], ["FC Goa", "Mohun Bagan SG", "May 9", "Fatorda"],
+            ["Jamshedpur FC", "Bengaluru FC", "May 9", "JRD TATA"], ["Kerala Blasters FC", "Mohammedan SC", "May 10", "Kochi"],
+            ["North East United FC", "Chennaiyin FC", "May 10", "Guwahati"], ["Sporting Club Delhi", "Inter Kashi FC", "May 11", "Delhi"]
+        ];
+
+        let fixtures = [];
+        let currentSortedTeams = [];
+        let latestMatchDate = "POST FEB-14";
+
+        function initData() {
+            fixtures = OFFICIAL_FIXTURES.map((f, i) => ({
+                id: `f-${i}`, home: f[0], away: f[1], date: f[2], venue: f[3], hScore: null, aScore: null
+            }));
+        }
+
+        async function fetchCSV() {
+            try {
+                // Fetch with cache busting to ensure latest results
+                const response = await fetch(CSV_URL + '?t=' + Date.now());
+                if (!response.ok) throw new Error();
+                const data = await response.text();
+                const rows = data.split('\n').slice(1);
+                rows.forEach(row => {
+                    const [home, away, hS, aS] = row.split(',').map(s => s?.trim());
+                    const m = fixtures.find(f => f.home === home && f.away === away);
+                    if (m && hS !== "" && hS !== undefined) {
+                        m.hScore = parseInt(hS); m.aScore = parseInt(aS);
+                        latestMatchDate = m.date; 
+                    }
+                });
+            } catch (e) { console.warn("Local sync enabled."); }
+        }
+
+        async function calculateTable() {
+            const stats = {};
+            TEAM_NAMES.forEach(n => stats[n] = { name: n, pld: 0, w: 0, d: 0, l: 0, pts: 0, gd: 0, form: [], rem: 0 });
+            fixtures.forEach(f => {
+                if (f.hScore !== null) {
+                    const hs = f.hScore, as = f.aScore;
+                    stats[f.home].pld++; stats[f.away].pld++;
+                    stats[f.home].gd += (hs-as); stats[f.away].gd += (as-hs);
+                    if (hs > as) { stats[f.home].w++; stats[f.home].pts += 3; stats[f.home].form.push('W'); stats[f.away].form.push('L'); }
+                    else if (as > hs) { stats[f.away].w++; stats[f.away].pts += 3; stats[f.away].form.push('W'); stats[f.home].form.push('L'); }
+                    else { stats[f.home].d++; stats[f.away].d++; stats[f.home].pts += 1; stats[f.away].pts += 1; stats[f.home].form.push('D'); stats[f.away].form.push('D'); }
+                } else { stats[f.home].rem++; stats[f.away].rem++; }
+            });
+
+            currentSortedTeams = Object.values(stats).sort((a,b) => b.pts - a.pts || b.gd - a.gd || a.pld - b.pld);
+            currentSortedTeams.forEach((t, i) => { t.rank = i + 1; t.maxPts = t.pts + (t.rem * 3); });
+
+            document.getElementById('lastUpdatedDate').innerText = `DATABASE SYNC: ${latestMatchDate.toUpperCase()}`;
+            renderTable(currentSortedTeams);
+            renderPlot(currentSortedTeams);
+            renderHeadlines(currentSortedTeams);
+            renderUpcomingFeed();
+            renderVenues();
+
+            document.getElementById('loadingOverlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
+        }
+
+        function renderTable(teams) {
+            const container = document.getElementById('standingsBody');
+            const isMBSGFirst = teams[0].name === "Mohun Bagan SG";
+            const acl2Idx = isMBSGFirst ? 1 : 0;
+
+            container.innerHTML = teams.map((t, i) => {
+                const isChamp = i === 0, isACL2 = i === acl2Idx, isLast = i === 13;
+                let rowClass = isACL2 ? 'acl2-glow' : isChamp ? 'champion-glow' : isLast ? 'relegation-glow' : '';
+                let tagsHTML = '';
+                if (i === 0) {
+                    tagsHTML += `<span class="status-pill pill-gold mr-1">League Leader</span>`;
+                    if (!isMBSGFirst) tagsHTML += `<span class="status-pill pill-cyan">ACL2 Quali</span>`;
+                } else if (i === 1 && isMBSGFirst) {
+                    tagsHTML += `<span class="status-pill pill-cyan">ACL2 Quali</span>`;
+                }
+
+                return `<tr class="border-b border-white/5 hover:bg-white/[0.02] group transition-all ${rowClass}">
+                    <td class="px-10 py-6 font-black text-slate-600 text-center text-xs tracking-tighter">${i+1}</td>
+                    <td class="px-4 py-6 font-bold text-white flex items-center gap-4">
+                        <span class="w-8 h-8 rounded-lg flex items-center justify-center text-[9px] text-white font-black shadow-xl" style="background:${TEAM_DATA[t.name].color}">${TEAM_DATA[t.name].code}</span>
+                        <div><span class="block">${t.name}</span>${tagsHTML}</div>
+                    </td>
+                    <td class="px-2 py-6 text-center text-slate-500 font-bold text-xs">${t.pld}</td>
+                    <td class="px-2 py-6 text-center text-slate-400 font-medium text-xs">${t.w}</td>
+                    <td class="px-2 py-6 text-center text-slate-500 font-medium text-xs">${t.d}</td>
+                    <td class="px-2 py-6 text-center text-slate-500 font-medium text-xs">${t.l}</td>
+                    <td class="px-2 py-6 text-center font-bold text-xs ${t.gd >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                    <td class="px-10 py-6"><div class="flex gap-1.5 justify-center">${t.form.slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f==='W'?'bg-emerald-500':f==='D'?'bg-slate-700':'bg-rose-500'}"></div>`).join('')}</div></td>
+                    <td class="px-8 py-6 text-center font-black text-white text-base tabular-nums">${t.pts}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderPlot(teams) {
+            const container = document.getElementById('plotRows');
+            const highestMax = Math.max(...teams.map(t => t.maxPts));
+            const lastMax = teams[13].maxPts;
+            const leaderFloor = teams[0].pts;
+            
+            document.getElementById('titleLine').style.left = `${(highestMax / 39) * 100}%`;
+            document.getElementById('safetyLine').style.left = `${(lastMax / 39) * 100}%`;
+
+            container.innerHTML = teams.map(t => {
+                const cP = (t.pts / 39) * 100, mP = (t.maxPts / 39) * 100;
+                let tag = "Active", tC = "text-blue-500", theme = "blue";
+                const othersMax = Math.max(...teams.filter(x => x.name !== t.name).map(x => x.maxPts));
+                
+                if (t.pts > othersMax) { tag = "Locked"; tC = "text-amber-400"; theme = "amber"; } 
+                else if (t.maxPts < leaderFloor) {
+                    if (t.pts <= lastMax) { tag = "At Risk"; tC = "text-rose-500"; theme = "rose"; }
+                    else { tag = "Eliminated"; tC = "text-slate-700"; theme = "gray"; }
+                } else { tag = `Margin: -${t.maxPts - leaderFloor}`; tC = "text-amber-600"; theme = "amber"; }
+
+                return `<div class="flex items-center group h-6 relative cursor-pointer" onclick="openDeepDive('${t.name}')">
+                    <div class="w-[160px] pr-8 text-right flex flex-col items-end">
+                        <span class="text-[9px] font-black text-slate-500 group-hover:text-white transition uppercase tracking-tighter mb-0.5 leading-none">${t.name}</span>
+                        <span class="text-[7px] font-black ${tC} uppercase tracking-widest leading-none">${tag}</span>
+                    </div>
+                    <div class="flex-1 relative h-2 bg-white/[0.03] rounded-full flex items-center">
+                        <div class="math-track"></div>
+                        <div class="available-bar bg-${theme}-500" style="left: ${cP}%; width: ${mP - cP}%"></div>
+                        <div class="pts-marker bg-${theme}-500 text-white shadow-2xl" style="left: ${cP}%">${t.pts}</div>
+                    </div>
+                    <div class="w-[100px] pl-8 text-[9px] font-black text-slate-600 tabular-nums tracking-widest">${t.pts} — ${t.maxPts}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderHeadlines(teams) {
+            const active = teams.filter(t => t.maxPts >= teams[0].pts).length;
+            document.getElementById('headlineContenders').innerText = `${active} ASSETS`;
+            document.getElementById('headlineChampion').innerText = teams[0].code;
+        }
+
+        function renderUpcomingFeed() {
+            const up = fixtures.filter(f => f.hScore === null).slice(0, 15);
+            document.getElementById('upcomingFeed').innerHTML = up.map(f => `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 group hover:bg-white/[0.05] transition">
+                <span class="text-[8px] font-black text-blue-500 uppercase block mb-3 tracking-[0.2em]">${f.date} • ${f.venue}</span>
+                <div class="flex items-center justify-between"><span class="text-xs font-black">${TEAM_DATA[f.home].code}</span><span class="text-[9px] font-black text-slate-700">VS</span><span class="text-xs font-black">${TEAM_DATA[f.away].code}</span></div>
+            </div>`).join('');
+        }
+
+        function renderVenues() {
+            const counts = {}; fixtures.filter(f => f.hScore === null).forEach(f => counts[f.venue] = (counts[f.venue] || 0) + 1);
+            document.getElementById('venueList').innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(v => `<div class="px-4 py-2 bg-white/[0.03] rounded-xl border border-white/5 text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition cursor-default">
+                <span class="text-blue-500 mr-2">${v[1]}</span> ${v[0]}
+            </div>`).join('');
+        }
+
+        function openDeepDive(name) {
+            const team = currentSortedTeams.find(t => t.name === name);
+            const othersMax = Math.max(...currentSortedTeams.filter(x => x.name !== name).map(x => x.maxPts));
+            const lastMax = currentSortedTeams[13].maxPts;
+            const safetyThresh = currentSortedTeams[12].pts;
+            
+            document.getElementById('modalHeader').innerHTML = `<div class="flex items-center gap-6">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black shadow-2xl" style="background:${TEAM_DATA[name].color}">${TEAM_DATA[name].code}</div>
+                <div><h2 class="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">${name}</h2><span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Strategic Profile / Matrix #${team.rank}</span></div>
+            </div>`;
+
+            const tM = document.getElementById('modalTitleMath'), sM = document.getElementById('modalSafetyMath');
+            const isChamp = team.pts > othersMax, isElim = team.maxPts < currentSortedTeams[0].pts, isSafe = team.pts > lastMax;
+
+            tM.innerText = isChamp ? "SECURED" : (isElim ? "IMPOSSIBLE" : `${Math.max(0, othersMax - team.pts + 1)} PTS TO LOCK`);
+            sM.innerText = isSafe ? "CONFIRMED" : (team.maxPts < safetyThresh ? "LOCKED BOTTOM" : `${Math.max(0, lastMax - team.pts + 1)} PTS TO SAFETY`);
+            
+            document.getElementById('titleDisclaimer').classList.toggle('hidden', isChamp || isElim);
+            document.getElementById('safetyDisclaimer').classList.toggle('hidden', isSafe);
+
+            document.getElementById('modalFullSchedule').innerHTML = fixtures.filter(f => f.home === name || f.away === name).map(f => {
+                const isP = f.hScore !== null, isH = f.home === name;
+                let b = ""; if (isP) {
+                    const tS = isH ? f.hScore : f.aScore, oS = isH ? f.aScore : f.hScore;
+                    const r = tS > oS ? 'W' : tS < oS ? 'L' : 'D';
+                    b = `<span class="w-6 h-6 rounded flex items-center justify-center text-[9px] font-black ${r==='W'?'bg-emerald-500':r==='L'?'bg-rose-500':'bg-slate-600'}">${r}</span>`;
+                }
+                return `<div class="bg-white/[0.03] p-5 rounded-[24px] border border-white/5 flex items-center justify-between transition hover:bg-white/[0.05]">
+                    <div class="flex flex-col gap-1"><span class="text-[8px] font-black text-slate-500 uppercase">${f.date}</span><div class="flex items-center gap-3">${b}<span class="text-xs font-bold text-white uppercase tracking-tight">${isH ? f.away : f.home}</span></div></div>
+                    <div class="text-right">${isP ? `<span class="text-xl font-black tabular-nums tracking-tighter">${f.hScore}-${f.aScore}</span>` : `<span class="text-[8px] font-black text-blue-500 uppercase tracking-widest">${f.venue}</span>`}</div>
+                </div>`;
+            }).join('');
+            document.getElementById('teamModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() { document.getElementById('teamModal').classList.add('hidden'); }
+
+        window.onload = async () => {
+            initData();
+            await fetchCSV();
+            calculateTable();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
