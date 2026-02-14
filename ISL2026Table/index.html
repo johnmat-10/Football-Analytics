@@ -42,7 +42,6 @@
         .acl2-glow { background: linear-gradient(90deg, rgba(34, 211, 238, 0.05) 0%, transparent 100%); border-left: 4px solid #22d3ee !important; }
         .relegation-glow { background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%); border-left: 4px solid #ef4444 !important; }
         
-        /* Tactical Subtle Cut-off Lines */
         .cutoff-line { 
             position: absolute; 
             top: 0; 
@@ -101,13 +100,11 @@
     </style>
 </head>
 <body class="min-h-screen selection:bg-blue-500/30">
-    <!-- Initial Loading State -->
     <div id="loadingOverlay">
         <div class="w-8 h-8 border-2 border-white/5 border-t-white rounded-full animate-spin mb-4"></div>
         <p class="text-[9px] font-black uppercase tracking-[0.4em] text-slate-500">Syncing Matrix</p>
     </div>
 
-    <!-- Deep Dive Modal -->
     <div id="teamModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm hidden" onclick="if(event.target === this) closeModal()">
         <div class="glass w-full max-w-3xl rounded-[32px] overflow-hidden shadow-2xl border border-white/10 modal-enter">
             <div id="modalHeader" class="p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]"></div>
@@ -138,7 +135,6 @@
     </div>
 
     <div class="max-w-[1550px] mx-auto p-6 md:p-12 pb-24">
-        <!-- Identity Header -->
         <header class="mb-16 flex flex-col lg:flex-row lg:items-start justify-between gap-10">
             <div class="flex items-center gap-4">
                 <div>
@@ -152,7 +148,6 @@
             </div>
             
             <div class="flex flex-col items-end gap-6">
-                <!-- Twitter/X Handle -->
                 <a href="https://x.com/totalf0otball" target="_blank" class="flex items-center gap-3 px-6 py-2.5 glass rounded-full border border-white/5 hover:bg-white/5 transition-all group">
                     <i data-lucide="twitter" class="text-blue-400 group-hover:scale-110 transition-transform" size="14"></i>
                     <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 group-hover:text-white transition-colors">@totalf0otball</span>
@@ -173,7 +168,6 @@
         </header>
 
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-12">
-            <!-- Table and Plot -->
             <div class="xl:col-span-8 space-y-12">
                 <section class="glass rounded-[48px] overflow-hidden border border-white/5 shadow-2xl">
                     <div class="p-10 border-b border-white/5 bg-white/[0.01]">
@@ -222,12 +216,11 @@
                                 <div class="flex-1 h-full relative" id="plotCoordinateSpace">
                                     <div id="titleLine" class="cutoff-line"></div>
                                     <div id="safetyLine" class="cutoff-line"></div>
-                                    <!-- Background grid marks - Precise 39pt scale -->
                                     <div class="absolute inset-0 flex justify-between pointer-events-none opacity-20">
                                         <div class="w-px bg-white/10 h-full"></div>
-                                        <div class="w-px bg-white/10 h-full" style="left: 25.64%"></div> <!-- 10/39 -->
-                                        <div class="w-px bg-white/10 h-full" style="left: 51.28%"></div> <!-- 20/39 -->
-                                        <div class="w-px bg-white/10 h-full" style="left: 76.92%"></div> <!-- 30/39 -->
+                                        <div class="w-px bg-white/10 h-full" style="left: 25.64%"></div>
+                                        <div class="w-px bg-white/10 h-full" style="left: 51.28%"></div>
+                                        <div class="w-px bg-white/10 h-full" style="left: 76.92%"></div>
                                         <div class="w-px bg-white/10 h-full" style="left: 100%"></div>
                                     </div>
                                 </div>
@@ -245,7 +238,6 @@
                 </section>
             </div>
 
-            <!-- Sidebar -->
             <div class="xl:col-span-4 space-y-12">
                 <section class="glass rounded-[48px] p-10 border border-white/5 shadow-xl flex flex-col max-h-[650px]">
                     <h2 class="text-xs font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3 mb-10">
@@ -255,7 +247,7 @@
                 </section>
 
                 <div class="glass rounded-[40px] p-10 border border-white/10">
-                    <h3 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 mb-8 italic text-center">Match Distribution</h3>
+                    <h3 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600 mb-8 italic text-center">Venue Profile</h3>
                     <div id="venueList" class="flex flex-wrap justify-center gap-3"></div>
                 </div>
             </div>
@@ -272,7 +264,7 @@
     </div>
 
     <script>
-        // Use relative path for seamless GitHub Pages integration
+        // CRITICAL: Ensure CSV is in the SAME folder as index.html
         const CSV_URL = "isl_2026_fixtures.csv"; 
 
         const TEAM_DATA = {
@@ -288,8 +280,8 @@
             "East Bengal FC": { code: "EBFC", color: "#ed1c24" },
             "Punjab FC": { code: "PFC", color: "#f36c21" },
             "Mohammedan SC": { code: "MSC", color: "#000000" },
-            "Inter Kashi FC": { code: "IKFC", color: "#f36c21" }, // Orange
-            "Sporting Club Delhi": { code: "SCD", color: "#ed1c24" }  // Red
+            "Inter Kashi FC": { code: "IKFC", color: "#f36c21" }, 
+            "Sporting Club Delhi": { code: "SCD", color: "#ed1c24" }
         };
 
         const TEAM_NAMES = Object.keys(TEAM_DATA);
@@ -341,7 +333,7 @@
 
         let fixtures = [];
         let currentSortedTeams = [];
-        let latestMatchDate = "POST FEB-14";
+        let latestMatchDate = "SYNCING...";
 
         function initData() {
             fixtures = OFFICIAL_FIXTURES.map((f, i) => ({
@@ -351,7 +343,7 @@
 
         async function fetchCSV() {
             try {
-                // Fetch with cache busting to ensure latest results
+                // Fetch with cache busting
                 const response = await fetch(CSV_URL + '?t=' + Date.now());
                 if (!response.ok) throw new Error();
                 const data = await response.text();
@@ -364,7 +356,10 @@
                         latestMatchDate = m.date; 
                     }
                 });
-            } catch (e) { console.warn("Local sync enabled."); }
+            } catch (e) { 
+                console.warn("Using internal memory only.");
+                latestMatchDate = "LOCAL MEMORY";
+            }
         }
 
         async function calculateTable() {
@@ -391,6 +386,7 @@
             renderUpcomingFeed();
             renderVenues();
 
+            // Clear loading screen immediately
             document.getElementById('loadingOverlay').style.opacity = '0';
             setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 400);
         }
@@ -421,7 +417,7 @@
                     <td class="px-2 py-6 text-center text-slate-400 font-medium text-xs">${t.w}</td>
                     <td class="px-2 py-6 text-center text-slate-500 font-medium text-xs">${t.d}</td>
                     <td class="px-2 py-6 text-center text-slate-500 font-medium text-xs">${t.l}</td>
-                    <td class="px-2 py-6 text-center font-bold text-xs ${t.gd >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
+                    <td class="px-2 py-6 text-center font-bold text-xs ${t.gd >= 0 ? 'text-emerald-400' : 'text-rose-500'}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
                     <td class="px-10 py-6"><div class="flex gap-1.5 justify-center">${t.form.slice(-5).map(f => `<div class="w-1.5 h-1.5 rounded-full ${f==='W'?'bg-emerald-500':f==='D'?'bg-slate-700':'bg-rose-500'}"></div>`).join('')}</div></td>
                     <td class="px-8 py-6 text-center font-black text-white text-base tabular-nums">${t.pts}</td>
                 </tr>`;
@@ -488,8 +484,9 @@
             const team = currentSortedTeams.find(t => t.name === name);
             const othersMax = Math.max(...currentSortedTeams.filter(x => x.name !== name).map(x => x.maxPts));
             const lastMax = currentSortedTeams[13].maxPts;
-            const safetyThresh = currentSortedTeams[12].pts;
-            
+            const ptsToTitle = Math.max(0, othersMax - team.pts + 1);
+            const ptsToSafety = Math.max(0, lastMax - team.pts + 1);
+
             document.getElementById('modalHeader').innerHTML = `<div class="flex items-center gap-6">
                 <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black shadow-2xl" style="background:${TEAM_DATA[name].color}">${TEAM_DATA[name].code}</div>
                 <div><h2 class="text-4xl font-black text-white italic tracking-tighter uppercase leading-none mb-1">${name}</h2><span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Strategic Profile / Matrix #${team.rank}</span></div>
@@ -498,8 +495,8 @@
             const tM = document.getElementById('modalTitleMath'), sM = document.getElementById('modalSafetyMath');
             const isChamp = team.pts > othersMax, isElim = team.maxPts < currentSortedTeams[0].pts, isSafe = team.pts > lastMax;
 
-            tM.innerText = isChamp ? "SECURED" : (isElim ? "IMPOSSIBLE" : `${Math.max(0, othersMax - team.pts + 1)} PTS TO LOCK`);
-            sM.innerText = isSafe ? "CONFIRMED" : (team.maxPts < safetyThresh ? "LOCKED BOTTOM" : `${Math.max(0, lastMax - team.pts + 1)} PTS TO SAFETY`);
+            tM.innerText = isChamp ? "SECURED" : (isElim ? "IMPOSSIBLE" : `${ptsToTitle} PTS TO LOCK`);
+            sM.innerText = isSafe ? "CONFIRMED" : `${ptsToSafety} PTS TO SAFETY`;
             
             document.getElementById('titleDisclaimer').classList.toggle('hidden', isChamp || isElim);
             document.getElementById('safetyDisclaimer').classList.toggle('hidden', isSafe);
@@ -524,6 +521,13 @@
 
         window.onload = async () => {
             initData();
+            // Set a hard timeout to clear overlay if fetch fails silently
+            setTimeout(() => {
+                if (document.getElementById('loadingOverlay').style.display !== 'none') {
+                    calculateTable();
+                }
+            }, 3000);
+            
             await fetchCSV();
             calculateTable();
             lucide.createIcons();
