@@ -19,6 +19,8 @@
             --accent-blue: #3b82f6;
             --gold: #fbbf24;
             --cyan: #22d3ee;
+            --emerald: #10b981;
+            --rose: #f43f5e;
         }
 
         body { 
@@ -44,7 +46,9 @@
         /* Qualification Glows */
         .champion-glow { background: linear-gradient(90deg, rgba(251, 191, 36, 0.05) 0%, transparent 100%); border-left: 4px solid var(--gold) !important; }
         .acl2-glow { background: linear-gradient(90deg, rgba(34, 211, 238, 0.08) 0%, transparent 100%); border-left: 4px solid var(--cyan) !important; }
-        .relegation-glow { background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, transparent 100%); border-left: 4px solid #ef4444 !important; }
+        .contender-glow { background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%); border-left: 4px solid var(--emerald) !important; }
+        .relegation-glow { background: linear-gradient(90deg, rgba(244, 63, 94, 0.05) 0%, transparent 100%); border-left: 4px solid var(--rose) !important; }
+        .stable-glow { background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%); border-left: 4px solid rgba(255, 255, 255, 0.1) !important; }
         
         .cutoff-line { 
             position: absolute; 
@@ -68,7 +72,7 @@
         }
 
         .status-pill {
-            font-size: 8px;
+            font-size: 7px;
             font-weight: 900;
             letter-spacing: 0.05em;
             padding: 2px 6px;
@@ -77,8 +81,12 @@
             display: inline-block;
             margin-top: 4px;
         }
+        @media (min-width: 768px) { .status-pill { font-size: 8px; } }
         .pill-gold { background: var(--gold); color: black; }
         .pill-cyan { background: var(--cyan); color: black; }
+        .pill-emerald { background: var(--emerald); color: white; }
+        .pill-rose { background: var(--rose); color: white; }
+        .pill-slate { background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); }
 
         #loadingOverlay {
             position: fixed; inset: 0; background: var(--bg-deep);
@@ -120,7 +128,6 @@
         <div class="glass w-full max-w-4xl rounded-[24px] md:rounded-[32px] overflow-hidden shadow-2xl border border-white/10 modal-enter">
             <div id="modalHeader" class="p-6 md:p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]"></div>
             <div class="p-6 md:p-10 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
-                <!-- Strategic Analytics -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5 transition hover:bg-white/[0.05]">
                         <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Championship Window</span>
@@ -187,7 +194,7 @@
                     <p class="text-xl md:text-2xl font-black text-white tracking-tighter uppercase mb-10">Points Tracking Matrix</p>
                     
                     <div class="relative">
-                        <!-- Header Labels (Synced to Plot area) -->
+                        <!-- Header Labels -->
                         <div class="flex items-center text-[9px] md:text-[10px] font-black text-slate-600 uppercase tracking-widest border-b border-white/5 pb-4 mb-6">
                             <div class="matrix-label-width pr-4 md:pr-8 text-right">Team</div>
                             <div class="flex-1 relative h-4">
@@ -205,14 +212,11 @@
                         </div>
 
                         <div class="relative min-h-[350px]">
-                            <!-- Grid and Thresholds -->
                             <div class="flex absolute inset-0 pointer-events-none">
                                 <div class="matrix-label-width h-full border-r border-white/5"></div> 
                                 <div class="flex-1 h-full relative" id="plotCoordinateSpace">
                                     <div id="titleLine" class="cutoff-line" title="Championship Threshold"></div>
                                     <div id="safetyLine" class="cutoff-line" title="Safety Buffer" style="border-color: #ef4444;"></div>
-                                    
-                                    <!-- Vertical Grid Lines (5pt increments) -->
                                     <div class="absolute inset-0 flex opacity-[0.03]">
                                         <div class="w-px bg-white h-full" style="margin-left: 12.82%"></div>
                                         <div class="w-px bg-white h-full" style="margin-left: 12.82%"></div>
@@ -379,9 +383,7 @@
                         const lastPoint = meta.data[meta.data.length - 1];
                         const teamCode = TEAM_DATA[dataset.label]?.code || "";
                         ctx.font = isMobile ? 'bold 7px "Inter"' : 'bold 9px "Inter"';
-                        ctx.fillStyle = '#ffffff';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                         ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
                         ctx.fillText(teamCode, lastPoint.x, lastPoint.y - (isMobile ? 10 : 12));
                         ctx.shadowBlur = 0;
@@ -465,22 +467,31 @@
             const container = document.getElementById('standingsBody');
             const isMBSGFirst = teams[0].name === "Mohun Bagan SG";
             const acl2Idx = isMBSGFirst ? 1 : 0;
+            const leaderFloor = teams[0].pts;
+            const basementCeiling = teams[13].maxPts;
 
             container.innerHTML = teams.map((t, i) => {
                 const isChamp = i === 0;
                 const isACL2 = i === acl2Idx;
-                const isLast = i === 13;
-                let rowClass = isACL2 ? 'acl2-glow' : isChamp ? 'champion-glow' : isLast ? 'relegation-glow' : '';
+                const isContender = t.maxPts >= leaderFloor && !isChamp && !isACL2;
+                const isAtRisk = t.pts <= basementCeiling && i > acl2Idx;
+                
+                let rowClass = 'stable-glow';
+                let tagClass = 'pill-slate';
+                let tagText = 'Standard';
+
+                if (isChamp) { rowClass = 'champion-glow'; tagClass = 'pill-gold'; tagText = 'Leader'; }
+                else if (isACL2) { rowClass = 'acl2-glow'; tagClass = 'pill-cyan'; tagText = 'ACL2'; }
+                else if (isContender) { rowClass = 'contender-glow'; tagClass = 'pill-emerald'; tagText = 'Title Contender'; }
+                else if (isAtRisk) { rowClass = 'relegation-glow'; tagClass = 'pill-rose'; tagText = 'At Risk'; }
+
                 let gdColor = t.gd === 0 ? 'text-slate-500' : (t.gd > 0 ? 'text-emerald-400' : 'text-rose-500');
-                let tagsHTML = '';
-                if (isChamp) tagsHTML += `<span class="status-pill pill-gold mr-1">Leader</span>`;
-                if (isACL2) tagsHTML += `<span class="status-pill pill-cyan">ACL2</span>`;
 
                 return `<tr class="border-b border-white/5 hover:bg-white/[0.02] transition ${rowClass}">
                     <td class="px-4 md:px-10 py-6 font-black text-slate-600 text-center text-[10px] md:text-xs tracking-tighter">${i+1}</td>
                     <td class="px-4 py-6 font-bold text-white flex items-center gap-2 md:gap-4">
                         ${getTeamLogo(t.name, "w-6 h-6 md:w-8 md:h-8")}
-                        <div><span class="hidden md:block text-[11px] md:text-sm font-semibold tracking-tight truncate">${t.name}</span>${tagsHTML}</div>
+                        <div><span class="hidden md:block text-[11px] md:text-sm font-semibold tracking-tight truncate">${t.name}</span><span class="status-pill ${tagClass}">${tagText}</span></div>
                     </td>
                     <td class="px-2 py-6 text-center text-slate-500 font-bold text-[10px] md:text-xs">${t.pld}</td>
                     <td class="px-2 py-6 text-center text-slate-400 font-medium text-[10px] md:text-xs">${t.w}</td>
@@ -510,11 +521,8 @@
                 let statusTag = `GAP: -${leaderFloor - t.pts}`;
                 let tagColor = "text-amber-600";
                 
-                if (leaderFloor === t.pts) { 
-                    statusTag = "LEADER"; tagColor = "text-amber-400"; 
-                } else if (t.maxPts < leaderFloor) { 
-                    statusTag = "ELIMINATED"; tagColor = "text-slate-700"; 
-                }
+                if (leaderFloor === t.pts) { statusTag = "LEADER"; tagColor = "text-amber-400"; }
+                else if (t.maxPts < leaderFloor) { statusTag = "OUT"; tagColor = "text-slate-700"; }
 
                 return `<div class="flex items-center group h-6 md:h-8 relative cursor-pointer" onclick="openDeepDive('${t.name}')">
                     <div class="matrix-label-width pr-4 md:pr-8 text-right flex items-center justify-end gap-2 md:gap-3">
