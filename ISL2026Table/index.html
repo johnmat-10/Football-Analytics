@@ -110,7 +110,7 @@
         }
 
         /* Matrix Dimensions */
-        .matrix-label-width { width: 60px; }
+        .matrix-label-width { width: 40px; }
         @media (min-width: 768px) { .matrix-label-width { width: 160px; } }
         
         .matrix-limit-width { width: 50px; }
@@ -128,6 +128,7 @@
         <div class="glass w-full max-w-4xl rounded-[24px] md:rounded-[32px] overflow-hidden shadow-2xl border border-white/10 modal-enter">
             <div id="modalHeader" class="p-6 md:p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]"></div>
             <div class="p-6 md:p-10 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                <!-- Strategic Analytics -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5 transition hover:bg-white/[0.05]">
                         <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Championship Window</span>
@@ -196,7 +197,7 @@
                     <div class="relative">
                         <!-- Header Labels -->
                         <div class="flex items-center text-[9px] md:text-[10px] font-black text-slate-600 uppercase tracking-widest border-b border-white/5 pb-4 mb-6">
-                            <div class="matrix-label-width pr-4 md:pr-8 text-right">Team</div>
+                            <div class="matrix-label-width pr-2 md:pr-8 text-right">Team</div>
                             <div class="flex-1 relative h-4">
                                 <span class="absolute left-0" style="transform: translateX(-50%)">0</span>
                                 <span class="absolute" style="left: 12.82%; transform: translateX(-50%)">5</span>
@@ -208,15 +209,18 @@
                                 <span class="absolute" style="left: 89.74%; transform: translateX(-50%)">35</span>
                                 <span class="absolute left-[100%]" style="transform: translateX(-50%)">39</span>
                             </div>
-                            <div class="matrix-limit-width pl-4 md:pl-8 text-left">Range</div>
+                            <div class="matrix-limit-width pl-2 md:pl-8 text-left">Range</div>
                         </div>
 
                         <div class="relative min-h-[350px]">
+                            <!-- Grid and Thresholds -->
                             <div class="flex absolute inset-0 pointer-events-none">
                                 <div class="matrix-label-width h-full border-r border-white/5"></div> 
                                 <div class="flex-1 h-full relative" id="plotCoordinateSpace">
                                     <div id="titleLine" class="cutoff-line" title="Championship Threshold"></div>
                                     <div id="safetyLine" class="cutoff-line" title="Safety Buffer" style="border-color: #ef4444;"></div>
+                                    
+                                    <!-- Vertical Grid Lines (5pt increments) -->
                                     <div class="absolute inset-0 flex opacity-[0.03]">
                                         <div class="w-px bg-white h-full" style="margin-left: 12.82%"></div>
                                         <div class="w-px bg-white h-full" style="margin-left: 12.82%"></div>
@@ -253,7 +257,7 @@
                                     <th class="px-2 py-6 text-center">D</th>
                                     <th class="px-2 py-6 text-center">L</th>
                                     <th class="px-2 py-6 text-center text-xs">GD</th>
-                                    <th class="px-4 md:px-10 py-6 text-center">Recent</th>
+                                    <th class="hidden md:table-cell px-4 md:px-10 py-6 text-center text-xs">Recent</th>
                                     <th class="px-4 md:px-8 py-6 text-right text-white">PTS</th>
                                 </tr>
                             </thead>
@@ -491,14 +495,21 @@
                     <td class="px-4 md:px-10 py-6 font-black text-slate-600 text-center text-[10px] md:text-xs tracking-tighter">${i+1}</td>
                     <td class="px-4 py-6 font-bold text-white flex items-center gap-2 md:gap-4">
                         ${getTeamLogo(t.name, "w-6 h-6 md:w-8 md:h-8")}
-                        <div><span class="hidden md:block text-[11px] md:text-sm font-semibold tracking-tight truncate">${t.name}</span><span class="status-pill ${tagClass}">${tagText}</span></div>
+                        <div class="hidden md:block">
+                            <span class="text-[11px] md:text-sm font-semibold tracking-tight block truncate">${t.name}</span>
+                            <span class="status-pill ${tagClass}">${tagText}</span>
+                        </div>
                     </td>
                     <td class="px-2 py-6 text-center text-slate-500 font-bold text-[10px] md:text-xs">${t.pld}</td>
                     <td class="px-2 py-6 text-center text-slate-400 font-medium text-[10px] md:text-xs">${t.w}</td>
                     <td class="px-2 py-6 text-center text-slate-500 font-medium text-[10px] md:text-xs">${t.d}</td>
                     <td class="px-2 py-6 text-center text-slate-500 font-medium text-[10px] md:text-xs">${t.l}</td>
                     <td class="px-2 py-6 text-center font-bold text-[10px] md:text-xs ${gdColor}">${t.gd > 0 ? '+' : ''}${t.gd}</td>
-                    <td class="px-4 md:px-10 py-6"><div class="flex gap-1 justify-center">${t.form.slice(-5).map(f => `<div class="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full ${f==='W'?'bg-emerald-500':f==='D'?'bg-slate-600':'bg-rose-500'}"></div>`).join('')}</div></td>
+                    <td class="hidden md:table-cell px-4 md:px-10 py-6">
+                        <div class="flex gap-1 justify-center">
+                            ${t.form.slice(-5).map(f => `<div class="w-1 md:w-1.5 h-1 md:h-1.5 rounded-full ${f==='W'?'bg-emerald-500':f==='D'?'bg-slate-600':'bg-rose-500'}"></div>`).join('')}
+                        </div>
+                    </td>
                     <td class="px-4 md:px-8 py-6 text-right font-black text-white text-sm md:text-base tabular-nums">${t.pts}</td>
                 </tr>`;
             }).join('');
@@ -525,9 +536,9 @@
                 else if (t.maxPts < leaderFloor) { statusTag = "OUT"; tagColor = "text-slate-700"; }
 
                 return `<div class="flex items-center group h-6 md:h-8 relative cursor-pointer" onclick="openDeepDive('${t.name}')">
-                    <div class="matrix-label-width pr-4 md:pr-8 text-right flex items-center justify-end gap-2 md:gap-3">
-                        <div class="flex flex-col items-end">
-                            <span class="hidden md:block text-[7px] md:text-[9px] font-black text-slate-500 group-hover:text-white transition uppercase tracking-tighter leading-none truncate">${t.name}</span>
+                    <div class="matrix-label-width pr-2 md:pr-8 text-right flex items-center justify-end gap-2 md:gap-3">
+                        <div class="hidden md:flex flex-col items-end">
+                            <span class="text-[7px] md:text-[9px] font-black text-slate-500 group-hover:text-white transition uppercase tracking-tighter leading-none truncate">${t.name}</span>
                             <span class="text-[5px] md:text-[7px] font-black ${tagColor} uppercase tracking-widest leading-none mt-0.5 md:mt-1">${statusTag}</span>
                         </div>
                         ${getTeamLogo(t.name, "w-4 h-4 md:w-5 md:h-5")}
@@ -537,7 +548,7 @@
                         <div class="available-bar" style="background:${TEAM_DATA[t.name].color}; left: ${cP}%; width: ${mP - cP}%"></div>
                         <div class="pts-marker text-white shadow-lg" style="background:${TEAM_DATA[t.name].color}; left: ${cP}%">${t.pts}</div>
                     </div>
-                    <div class="matrix-limit-width pl-4 md:pl-8 text-[7px] md:text-[9px] font-black text-slate-600 tabular-nums tracking-widest">${t.pts}—${t.maxPts}</div>
+                    <div class="matrix-limit-width pl-2 md:pl-8 text-[7px] md:text-[9px] font-black text-slate-600 tabular-nums tracking-widest">${t.pts}—${t.maxPts}</div>
                 </div>`;
             }).join('');
         }
