@@ -126,8 +126,8 @@
     <!-- Deep Dive Modal -->
     <div id="teamModal" class="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-4 bg-black/90 backdrop-blur-sm hidden" onclick="if(event.target === this) closeModal()">
         <div class="glass w-full max-w-4xl rounded-[24px] md:rounded-[32px] overflow-hidden shadow-2xl border border-white/10 modal-enter">
-            <div id="modalHeader" class="p-6 md:p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]"></div>
-            <div class="p-6 md:p-10 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+            <div id="modalHeader" class="p-10 border-b border-white/5 flex items-center justify-between bg-white/[0.02]"></div>
+            <div class="p-10 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
                 <!-- Strategic Analytics -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5 transition hover:bg-white/[0.05]">
@@ -180,11 +180,14 @@
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
             <div class="xl:col-span-8 space-y-6 md:space-y-8">
                 <!-- Momentum Chart -->
-                <section class="glass rounded-[32px] md:rounded-[48px] p-6 md:p-10 border border-white/5 shadow-2xl">
-                    <h2 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3 mb-8">
-                        <i data-lucide="trending-up" class="text-blue-500" size="16"></i> Season Momentum (Top 6)
-                    </h2>
-                    <div class="h-[250px] md:h-[350px] w-full">
+                <section class="glass rounded-[32px] md:rounded-[48px] p-6 md:p-10 border border-white/5 shadow-2xl relative">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                        <h2 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3">
+                            <i data-lucide="trending-up" class="text-blue-500" size="16"></i> Season Momentum
+                        </h2>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase tracking-widest hidden md:block">Tap line to highlight team</p>
+                    </div>
+                    <div class="h-[300px] md:h-[400px] w-full">
                         <canvas id="momentumChart"></canvas>
                     </div>
                 </section>
@@ -242,9 +245,19 @@
                 <!-- PERFORMANCE MATRIX -->
                 <section class="glass rounded-[32px] md:rounded-[48px] overflow-hidden border border-white/5 shadow-2xl">
                     <div class="p-6 md:p-10 border-b border-white/5 bg-white/[0.01]">
-                        <h2 class="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-slate-400">
-                            <i data-lucide="list" class="text-blue-500" size="18"></i> Performance Matrix
-                        </h2>
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <h2 class="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-slate-400">
+                                <i data-lucide="list" class="text-blue-500" size="18"></i> Performance Matrix
+                            </h2>
+                            <!-- Status Legend -->
+                            <div class="flex flex-wrap gap-2">
+                                <span class="status-pill pill-gold !mt-0">Leader</span>
+                                <span class="status-pill pill-cyan !mt-0">ACL2</span>
+                                <span class="status-pill pill-emerald !mt-0">Contender</span>
+                                <span class="status-pill pill-rose !mt-0">At Risk</span>
+                                <span class="status-pill pill-slate !mt-0">N/A</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
@@ -284,7 +297,7 @@
         const TOTAL_MAX_PTS = 39; 
         const SYNC_INTERVAL = 60000;
         let momentumChart = null;
-        const logoCache = {};
+        let activeDatasetIndex = null;
 
         const TEAM_DATA = {
             "Mohun Bagan SG": { code: "MBSG", color: "#851c2d", logo: "https://images.fotmob.com/image_resources/logo/teamlogo/578651.png" },
@@ -309,15 +322,6 @@
                 return `<div class="${size} logo-frame"><img src="${team.logo}" alt="${name}" class="w-full h-full object-contain p-0.5" onerror="this.parentElement.style.background='${team.color}';this.style.display='none';this.parentElement.innerHTML='<span class=\'text-[9px] font-black text-white uppercase\'>${team.code}</span>'"></div>`;
             }
             return `<div class="${size} logo-frame" style="background:${team.color}"><span class="text-[9px] font-black text-white uppercase">${team.code}</span></div>`;
-        }
-
-        function getCachedImage(name) {
-            if (!logoCache[name]) {
-                const img = new Image();
-                img.src = TEAM_DATA[name].logo;
-                logoCache[name] = img;
-            }
-            return logoCache[name];
         }
 
         const TEAM_NAMES = Object.keys(TEAM_DATA);
@@ -379,6 +383,7 @@
             id: 'lastPointLabel',
             afterDatasetsDraw(chart) {
                 const { ctx } = chart;
+                if (!ctx) return;
                 const isMobile = window.innerWidth < 768;
                 ctx.save();
                 chart.data.datasets.forEach((dataset, i) => {
@@ -386,9 +391,18 @@
                     if (!meta.hidden && dataset.data.length > 0) {
                         const lastPoint = meta.data[meta.data.length - 1];
                         const teamCode = TEAM_DATA[dataset.label]?.code || "";
-                        ctx.font = isMobile ? 'bold 7px "Inter"' : 'bold 9px "Inter"';
-                        ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4;
+                        const isActive = activeDatasetIndex === null || activeDatasetIndex === i;
+                        
+                        ctx.font = (isMobile ? 'bold 7px "Inter"' : 'bold 9px "Inter"');
+                        ctx.fillStyle = isActive ? '#ffffff' : 'rgba(255,255,255,0.1)';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        if (isActive) {
+                            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                            ctx.shadowBlur = 4;
+                        }
+                        
                         ctx.fillText(teamCode, lastPoint.x, lastPoint.y - (isMobile ? 10 : 12));
                         ctx.shadowBlur = 0;
                     }
@@ -477,16 +491,18 @@
             container.innerHTML = teams.map((t, i) => {
                 const isChamp = i === 0;
                 const isACL2 = i === acl2Idx;
+                
+                // PRIORITY Logic
                 const isContender = t.maxPts >= leaderFloor && !isChamp && !isACL2;
-                const isAtRisk = t.pts <= basementCeiling && i > acl2Idx;
+                const isAtRisk = !isContender && t.pts <= basementCeiling && !isChamp && !isACL2;
                 
                 let rowClass = 'stable-glow';
                 let tagClass = 'pill-slate';
-                let tagText = 'Standard';
+                let tagText = 'N/A';
 
                 if (isChamp) { rowClass = 'champion-glow'; tagClass = 'pill-gold'; tagText = 'Leader'; }
                 else if (isACL2) { rowClass = 'acl2-glow'; tagClass = 'pill-cyan'; tagText = 'ACL2'; }
-                else if (isContender) { rowClass = 'contender-glow'; tagClass = 'pill-emerald'; tagText = 'Title Contender'; }
+                else if (isContender) { rowClass = 'contender-glow'; tagClass = 'pill-emerald'; tagText = 'Contender'; }
                 else if (isAtRisk) { rowClass = 'relegation-glow'; tagClass = 'pill-rose'; tagText = 'At Risk'; }
 
                 let gdColor = t.gd === 0 ? 'text-slate-500' : (t.gd > 0 ? 'text-emerald-400' : 'text-rose-500');
@@ -497,8 +513,8 @@
                         ${getTeamLogo(t.name, "w-6 h-6 md:w-8 md:h-8")}
                         <div class="hidden md:block">
                             <span class="text-[11px] md:text-sm font-semibold tracking-tight block truncate">${t.name}</span>
-                            <span class="status-pill ${tagClass}">${tagText}</span>
                         </div>
+                        <span class="status-pill ${tagClass}">${tagText}</span>
                     </td>
                     <td class="px-2 py-6 text-center text-slate-500 font-bold text-[10px] md:text-xs">${t.pld}</td>
                     <td class="px-2 py-6 text-center text-slate-400 font-medium text-[10px] md:text-xs">${t.w}</td>
@@ -528,10 +544,7 @@
             document.getElementById('plotRows').innerHTML = teams.map(t => {
                 const cP = (t.pts / TOTAL_MAX_PTS) * 100;
                 const mP = (t.maxPts / TOTAL_MAX_PTS) * 100;
-                
-                let statusTag = `GAP: -${leaderFloor - t.pts}`;
-                let tagColor = "text-amber-600";
-                
+                let statusTag = `GAP: -${leaderFloor - t.pts}`, tagColor = "text-amber-600";
                 if (leaderFloor === t.pts) { statusTag = "LEADER"; tagColor = "text-amber-400"; }
                 else if (t.maxPts < leaderFloor) { statusTag = "OUT"; tagColor = "text-slate-700"; }
 
@@ -548,36 +561,72 @@
                         <div class="available-bar" style="background:${TEAM_DATA[t.name].color}; left: ${cP}%; width: ${mP - cP}%"></div>
                         <div class="pts-marker text-white shadow-lg" style="background:${TEAM_DATA[t.name].color}; left: ${cP}%">${t.pts}</div>
                     </div>
-                    <div class="matrix-limit-width pl-2 md:pl-8 text-[7px] md:text-[9px] font-black text-slate-600 tabular-nums tracking-widest">${t.pts}—${t.maxPts}</div>
+                    <div class="matrix-limit-width pl-4 md:pl-8 text-[7px] md:text-[9px] font-black text-slate-600 tabular-nums tracking-widest">${t.pts}—${t.maxPts}</div>
                 </div>`;
             }).join('');
         }
 
         function updateMomentumChart(teams) {
             const ctx = document.getElementById('momentumChart').getContext('2d');
-            const topTeams = teams.slice(0, 6);
             const isMobile = window.innerWidth < 768;
             
-            const datasets = topTeams.map(t => ({
-                label: t.name, data: t.history, borderColor: TEAM_DATA[t.name].color, backgroundColor: 'transparent',
-                borderWidth: isMobile ? 1.5 : 2.5, tension: 0.3, 
-                pointRadius: t.history.map((_, idx) => (idx === t.history.length - 1 ? (isMobile ? 3 : 4) : 0)),
-                pointBackgroundColor: '#ffffff', pointBorderColor: TEAM_DATA[t.name].color, pointBorderWidth: 2
+            const datasets = teams.map((t, idx) => ({
+                label: t.name, 
+                data: [...t.history], 
+                borderColor: (activeDatasetIndex === null || activeDatasetIndex === idx) ? TEAM_DATA[t.name].color : `${TEAM_DATA[t.name].color}10`,
+                backgroundColor: 'transparent',
+                borderWidth: activeDatasetIndex === idx ? (isMobile ? 2.5 : 4) : (isMobile ? 1 : 1.5), 
+                tension: 0.4, 
+                pointRadius: t.history.map((_, pIdx) => (pIdx === t.history.length - 1 ? (activeDatasetIndex === idx ? 5 : 3) : 0)),
+                pointBackgroundColor: '#ffffff', 
+                pointBorderColor: TEAM_DATA[t.name].color, 
+                pointBorderWidth: 2,
+                pointHitRadius: 10
             }));
 
-            if (momentumChart) momentumChart.destroy();
-            momentumChart = new Chart(ctx, {
-                type: 'line', data: { labels: Array.from({length: 14}, (_, i) => `G${i}`), datasets },
-                plugins: [lastPointLabelPlugin],
-                options: { 
-                    responsive: true, maintainAspectRatio: false, layout: { padding: { top: 20, right: 10 } },
-                    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
-                    scales: { 
-                        y: { min: 0, max: 39, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569', font: { size: isMobile ? 8 : 10 } } }, 
-                        x: { grid: { display: false }, ticks: { color: '#475569', font: { size: isMobile ? 8 : 10 } } } 
+            if (momentumChart) {
+                // High-performance update
+                momentumChart.data.datasets = datasets;
+                momentumChart.update('none');
+            } else {
+                // Initial creation
+                momentumChart = new Chart(ctx, {
+                    type: 'line', 
+                    data: { labels: Array.from({length: 14}, (_, i) => `G${i}`), datasets },
+                    plugins: [lastPointLabelPlugin],
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        layout: { padding: { top: 20, right: 15 } },
+                        onHover: (event, chartElement) => {
+                            const newActiveIndex = chartElement.length > 0 ? chartElement[0].datasetIndex : null;
+                            if (newActiveIndex !== activeDatasetIndex) {
+                                activeDatasetIndex = newActiveIndex;
+                                updateMomentumChart(currentSortedTeams);
+                            }
+                        },
+                        onClick: (event, chartElement) => {
+                            if (chartElement.length > 0) {
+                                const index = chartElement[0].datasetIndex;
+                                activeDatasetIndex = (activeDatasetIndex === index) ? null : index;
+                                updateMomentumChart(currentSortedTeams);
+                            }
+                        },
+                        plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } },
+                        scales: { 
+                            y: { 
+                                min: 0, max: 39, 
+                                grid: { color: 'rgba(255,255,255,0.02)', drawBorder: false }, 
+                                ticks: { color: '#475569', font: { size: isMobile ? 8 : 10, weight: '600' } } 
+                            }, 
+                            x: { 
+                                grid: { display: false }, 
+                                ticks: { color: '#475569', font: { size: isMobile ? 8 : 10, weight: '600' } } 
+                            } 
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         function renderUpcomingFeed() {
@@ -630,7 +679,13 @@
             await fetchCSV();
             calculateTable();
             setInterval(async () => { await fetchCSV(); calculateTable(); }, SYNC_INTERVAL);
-            window.addEventListener('resize', () => calculateTable());
+            window.addEventListener('resize', () => {
+                 if (momentumChart) {
+                      momentumChart.destroy();
+                      momentumChart = null;
+                 }
+                 calculateTable();
+            });
             lucide.createIcons();
         };
     </script>
