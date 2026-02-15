@@ -88,6 +88,7 @@
         }
 
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         
         .logo-frame {
@@ -101,7 +102,7 @@
         }
 
         /* Matrix Dimensions */
-        .matrix-label-width { width: 80px; }
+        .matrix-label-width { width: 60px; }
         @media (min-width: 768px) { .matrix-label-width { width: 160px; } }
         
         .matrix-limit-width { width: 50px; }
@@ -121,12 +122,12 @@
             <div class="p-6 md:p-10 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
                 <!-- Strategic Analytics -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                    <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5">
+                    <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5 transition hover:bg-white/[0.05]">
                         <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Championship Window</span>
                         <div id="modalTitleMath" class="text-2xl md:text-4xl font-black text-amber-400 tracking-tighter italic">--</div>
                         <div class="text-[10px] font-bold text-slate-600 mt-2 uppercase tracking-widest" id="modalRemGames">-- Games Left</div>
                     </div>
-                    <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5">
+                    <div class="bg-white/[0.03] p-6 md:p-8 rounded-[20px] border border-white/5 transition hover:bg-white/[0.05]">
                         <span class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] block mb-2">Mathematical Ceiling</span>
                         <div id="modalMaxPts" class="text-2xl md:text-4xl font-black text-white tracking-tighter italic">--</div>
                         <div id="modalSafetyMath" class="text-[10px] font-bold text-rose-600 mt-2 uppercase tracking-widest">--</div>
@@ -181,9 +182,9 @@
                 </section>
 
                 <!-- Points Matrix Visualization -->
-                <section class="glass rounded-[32px] md:rounded-[48px] p-6 md:p-12 border border-white/5 shadow-2xl relative overflow-hidden">
-                    <h2 class="text-xs font-black uppercase tracking-[0.4em] text-blue-500 mb-2 text-center text-slate-500">Outcome Projections</h2>
-                    <p class="text-xl md:text-2xl font-black text-white tracking-tighter uppercase mb-10 text-center">Points Tracking Matrix</p>
+                <section class="glass rounded-[32px] md:rounded-[48px] p-6 md:p-12 border border-white/5 shadow-2xl relative overflow-hidden text-center md:text-left">
+                    <h2 class="text-xs font-black uppercase tracking-[0.4em] text-blue-500 mb-2 text-slate-500">Outcome Projections</h2>
+                    <p class="text-xl md:text-2xl font-black text-white tracking-tighter uppercase mb-10">Points Tracking Matrix</p>
                     
                     <div class="relative">
                         <!-- Header Labels (Synced to Plot area) -->
@@ -200,7 +201,7 @@
                                 <span class="absolute" style="left: 89.74%; transform: translateX(-50%)">35</span>
                                 <span class="absolute left-[100%]" style="transform: translateX(-50%)">39</span>
                             </div>
-                            <div class="matrix-limit-width pl-4 md:pl-8">Limit</div>
+                            <div class="matrix-limit-width pl-4 md:pl-8 text-left">Range</div>
                         </div>
 
                         <div class="relative min-h-[350px]">
@@ -275,6 +276,7 @@
         const TOTAL_MAX_PTS = 39; 
         const SYNC_INTERVAL = 60000;
         let momentumChart = null;
+        const logoCache = {};
 
         const TEAM_DATA = {
             "Mohun Bagan SG": { code: "MBSG", color: "#851c2d", logo: "https://images.fotmob.com/image_resources/logo/teamlogo/578651.png" },
@@ -299,6 +301,15 @@
                 return `<div class="${size} logo-frame"><img src="${team.logo}" alt="${name}" class="w-full h-full object-contain p-0.5" onerror="this.parentElement.style.background='${team.color}';this.style.display='none';this.parentElement.innerHTML='<span class=\'text-[9px] font-black text-white uppercase\'>${team.code}</span>'"></div>`;
             }
             return `<div class="${size} logo-frame" style="background:${team.color}"><span class="text-[9px] font-black text-white uppercase">${team.code}</span></div>`;
+        }
+
+        function getCachedImage(name) {
+            if (!logoCache[name]) {
+                const img = new Image();
+                img.src = TEAM_DATA[name].logo;
+                logoCache[name] = img;
+            }
+            return logoCache[name];
         }
 
         const TEAM_NAMES = Object.keys(TEAM_DATA);
@@ -469,7 +480,7 @@
                     <td class="px-4 md:px-10 py-6 font-black text-slate-600 text-center text-[10px] md:text-xs tracking-tighter">${i+1}</td>
                     <td class="px-4 py-6 font-bold text-white flex items-center gap-2 md:gap-4">
                         ${getTeamLogo(t.name, "w-6 h-6 md:w-8 md:h-8")}
-                        <div><span class="text-[11px] md:text-sm font-semibold tracking-tight block truncate max-w-[80px] md:max-w-none">${t.name}</span>${tagsHTML}</div>
+                        <div><span class="hidden md:block text-[11px] md:text-sm font-semibold tracking-tight truncate">${t.name}</span>${tagsHTML}</div>
                     </td>
                     <td class="px-2 py-6 text-center text-slate-500 font-bold text-[10px] md:text-xs">${t.pld}</td>
                     <td class="px-2 py-6 text-center text-slate-400 font-medium text-[10px] md:text-xs">${t.w}</td>
@@ -508,7 +519,7 @@
                 return `<div class="flex items-center group h-6 md:h-8 relative cursor-pointer" onclick="openDeepDive('${t.name}')">
                     <div class="matrix-label-width pr-4 md:pr-8 text-right flex items-center justify-end gap-2 md:gap-3">
                         <div class="flex flex-col items-end">
-                            <span class="text-[7px] md:text-[9px] font-black text-slate-500 group-hover:text-white transition uppercase tracking-tighter leading-none truncate max-w-[50px] md:max-w-none">${t.name}</span>
+                            <span class="hidden md:block text-[7px] md:text-[9px] font-black text-slate-500 group-hover:text-white transition uppercase tracking-tighter leading-none truncate">${t.name}</span>
                             <span class="text-[5px] md:text-[7px] font-black ${tagColor} uppercase tracking-widest leading-none mt-0.5 md:mt-1">${statusTag}</span>
                         </div>
                         ${getTeamLogo(t.name, "w-4 h-4 md:w-5 md:h-5")}
