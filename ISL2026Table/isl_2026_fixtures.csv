@@ -27,7 +27,7 @@ Kerala Blasters FC,Chennaiyin FC,0,1
 Mumbai City FC,Sporting Club Delhi,2,2
 Punjab FC,North East United FC,1,1
 Chennaiyin FC,Mohammedan SC,0,0
-Sporting Club Delhi,Odisha FC,,
+Sporting Club Delhi,Odisha FC,1,2
 East Bengal FC,Kerala Blasters FC,1,1
 Bengaluru FC,Mohun Bagan SG,0,0
 North East United FC,Jamshedpur FC,2,1
@@ -61,32 +61,32 @@ Kerala Blasters FC,Jamshedpur FC,2,0
 FC Goa,Mumbai City FC,2,0
 North East United FC,Mohun Bagan SG,0,1
 Punjab FC,Inter Kashi FC,3,0
-Kerala Blasters FC,Odisha FC,,
-North East United FC,FC Goa,,
-East Bengal FC,Punjab FC,,
-Bengaluru FC,Mumbai City FC,,
-Jamshedpur FC,Chennaiyin FC,,
-Sporting Club Delhi,Mohammedan SC,,
-Mohun Bagan SG,Inter Kashi FC,,
-East Bengal FC,Odisha FC,,
-Jamshedpur FC,FC Goa,,
-Inter Kashi FC,North East United FC,,
-Sporting Club Delhi,Punjab FC,,
-Mohammedan SC,Mumbai City FC,,
-Mohun Bagan SG,East Bengal FC,,
-Odisha FC,Bengaluru FC,,
-Punjab FC,Chennaiyin FC,,
-Mumbai City FC,East Bengal FC,,
-FC Goa,Mohun Bagan SG,,
-Jamshedpur FC,Bengaluru FC,,
-Kerala Blasters FC,Mohammedan SC,,
-North East United FC,Chennaiyin FC,,
-Sporting Club Delhi,Inter Kashi FC,,
-Bengaluru FC,Chennaiyin FC,,
-East Bengal FC,Inter Kashi FC,,
-FC Goa,Kerala Blasters FC,,
-Odisha FC,Punjab FC,,
-Jamshedpur FC,Odisha FC,,
-Mohammedan SC,North East United FC,,
-Mohun Bagan SG,Sporting Club Delhi,,
-Mumbai City FC,Punjab FC,,
+Kerala Blasters FC,Odisha FC,2,1
+North East United FC,FC Goa,0,2
+East Bengal FC,Punjab FC,0,0
+Bengaluru FC,Mumbai City FC,0,0
+Jamshedpur FC,Chennaiyin FC,4,1
+Sporting Club Delhi,Mohammedan SC,2,2
+Mohun Bagan SG,Inter Kashi FC,0,0
+East Bengal FC,Odisha FC,3,0
+Jamshedpur FC,FC Goa,2,0
+Inter Kashi FC,North East United FC,2,3
+Sporting Club Delhi,Punjab FC,0,0
+Mohammedan SC,Mumbai City FC,0,4
+Mohun Bagan SG,East Bengal FC,1,1
+Odisha FC,Bengaluru FC,1,1
+Punjab FC,Chennaiyin FC,1,0
+Mumbai City FC,East Bengal FC,1,2
+FC Goa,Mohun Bagan SG,1,1
+Jamshedpur FC,Bengaluru FC,0,1
+Kerala Blasters FC,Mohammedan SC,3,1
+North East United FC,Chennaiyin FC,4,1
+Sporting Club Delhi,Inter Kashi FC,0,0
+Bengaluru FC,Chennaiyin FC,2,1
+East Bengal FC,Inter Kashi FC,2,1
+FC Goa,Kerala Blasters FC,1,2
+Odisha FC,Punjab FC,2,3
+Jamshedpur FC,Odisha FC,0,0
+Mohammedan SC,North East United FC,0,2
+Mohun Bagan SG,Sporting Club Delhi,2,1
+Mumbai City FC,Punjab FC,2,0
